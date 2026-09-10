@@ -1,0 +1,85 @@
+.fishBanner img{
+
+  width: auto;
+  height: auto;
+  margin-top: -30px;
+  margin-bottom: 20px;
+  max-width: 100%;
+  max-height: 100%;
+}
+@media screen and (min-width: 768px) {
+  .fishBanner img{
+    width: 600px;
+  }
+}
+
+#root {
+  height: 100%;
+}
+
+.MyPage {
+  display: flex;
+  /*padding-bottom: 3%;*/
+  flex-direction: column;
+  height: 100%;
+  align-items: center;
+  /*padding-top: 90px;*/
+  justify-content: center;
+  background: url("background1.jpg") 0;
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+
+.wrap_content {
+
+  width: auto;
+  height: auto;
+  background: -webkit-linear-gradient(132deg, rgb(148, 138, 124), rgb(74, 66, 56));
+  background: linear-gradient(132deg, rgb(148, 138, 124), rgb(74, 66, 56));
+
+  border-radius: 10px;
+  padding: 0px;
+  /*box-shadow: 0px 8px 32px 0 rgba(0,0,255,0.33) ;*/
+}
+
+
+@media screen and (min-width: 576px) and (max-width: 992px) {
+  .fishBanner img{
+    display: none;
+  }
+  .MyPage{
+    width: 100%;
+    height: 100%;
+    .wrap_content{
+      margin-top: 20px;
+      margin-bottom: 50px;
+    }
+  }
+
+}
+/*手機*/
+@media screen and (max-width: 576px) {
+  .wrap_content{
+    margin-left: 25px;
+    margin-right: 30px;
+    width: 350px !important;
+
+  }
+}
+
+
+.LoginContent {
+  padding: 50px;
+}
+.login_account label{
+  color:white !important;
+}
+
+.login_password label{
+  color:white !important;
+}
+
+.login_text {
+  color: gray;
+  padding-left: 5px;
+}
