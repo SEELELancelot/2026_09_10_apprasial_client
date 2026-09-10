@@ -27,6 +27,21 @@ const PreviewAppraisalRecordExcel = () => {
     console.warn("Document is loaded");
   };
 
+  // 不讓 OnlyOffice 在 iframe 內用舊 session 自行重載檔案。
+  // 它偵測到來源版本變更時，改由外層頁重新向伺服器取得最新安全快照。
+  const onOutdatedVersion = function () {
+    const reloadKey = `onlyoffice-outdated:${window.location.href}`;
+    const now = Date.now();
+    const lastReloadAt = Number(window.sessionStorage.getItem(reloadKey) || 0);
+
+    if (now - lastReloadAt < 10000) {
+      return;
+    }
+
+    window.sessionStorage.setItem(reloadKey, String(now));
+    window.location.reload();
+  };
+
   const onLoadComponentError = function (errorCode, errorDescription) {
     switch (errorCode) {
       case -1:
@@ -237,6 +252,10 @@ const PreviewAppraisalRecordExcel = () => {
         id={editorId}
         documentServerUrl={onlyOfficeServer}
         config={{
+          events: {
+            onDocumentReady,
+            onOutdatedVersion,
+          },
           document: {
             fileType: "xlsx",
             title: excelName,
