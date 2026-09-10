@@ -3,5 +3,3 @@ module.exports = {
     '@tailwindcss/postcss': {},
   },
 };
-
-
