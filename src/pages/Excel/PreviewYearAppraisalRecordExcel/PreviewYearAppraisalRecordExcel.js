@@ -12,6 +12,8 @@ import ROUTENAME from "../../../../config/routesName";
 import { DocumentEditor } from "@onlyoffice/document-editor-react";
 import { history, useModel } from "@umijs/max";
 import { ScaleTransform } from "../../../../utils/ScaleTransform";
+import { useOnlyOfficePreviewGuard } from "@/hooks/useOnlyOfficePreviewGuard";
+import OnlyOfficeStatusNotice from "@/components/OnlyOfficeStatusNotice";
 
 const PreviewYearAppraisalRecordExcel = () => {
   const { initialState } = useModel("@@initialState");
@@ -19,11 +21,9 @@ const PreviewYearAppraisalRecordExcel = () => {
   const editorId = "Editor";
 
   const [documentEditor, setDocumentEditor] = useState(null);
-  // 同一帳號多開分頁時，每個分頁使用獨立協作 session，仍共用同一文件 key。
-  const [onlyOfficeSessionId] = useState(
-    () => `${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`,
-  );
-
+  const documentId = new URL(window.location.href).searchParams.get("DocumentId");
+  const { leaseReady, leaseError, isOnline, isEditable, accessRevoked, setEditable } =
+    useOnlyOfficePreviewGuard(documentId);
   const onDocumentReady = function () {
     console.warn("Year Appraisal Document is loaded");
   };
@@ -269,6 +269,7 @@ const PreviewYearAppraisalRecordExcel = () => {
               modifyContentControl: false,
               modifyFilter: false,
               fillForms: false,
+              userInfoGroups: [],
             },
           },
 
@@ -276,7 +277,7 @@ const PreviewYearAppraisalRecordExcel = () => {
             mode: officeMode,
             coEditing: {
               mode: "fast",
-              change: true,
+              change: false,
             },
 
             ...(callbackUrl ? { callbackUrl } : {}),
@@ -312,7 +313,7 @@ const PreviewYearAppraisalRecordExcel = () => {
             lang: "zh-tw",
 
             user: {
-              id: `${loginUser?.USER_ID || 'anonymous'}_${onlyOfficeSessionId}`,
+              id: String(loginUser?.USER_ID || "anonymous"),
               name: loginUser?.USER_NAME,
             },
           },
@@ -331,6 +332,7 @@ const PreviewYearAppraisalRecordExcel = () => {
                                     historyVersionId,
                                     loginUser,
                                   }) => {
+    setEditable(false);
     if (!historyVersionId) {
       console.warn("缺少 historyVersionId");
       return;
@@ -410,6 +412,7 @@ const PreviewYearAppraisalRecordExcel = () => {
       loginUser,
       isHistoryPreview: false,
     });
+    setEditable(officeMode === "edit");
 
     const callbackUrl = buildCallbackUrl({
       excelName,
@@ -487,11 +490,10 @@ const PreviewYearAppraisalRecordExcel = () => {
       return history.replace(ROUTENAME.Login);
     }
 
-    const params = new URL(window.location.href).searchParams;
-    const documentId = params.get("DocumentId");
-
+    if (!leaseReady || leaseError) return undefined;
     getExcelNameFetch(documentId);
-  }, []);
+    return undefined;
+  }, [leaseReady, leaseError]);
 
 
   return (
@@ -507,6 +509,12 @@ const PreviewYearAppraisalRecordExcel = () => {
         background: "#fff",
       }}
     >
+      <OnlyOfficeStatusNotice
+        leaseError={leaseError}
+        isOnline={isOnline}
+        isEditable={isEditable}
+        accessRevoked={accessRevoked}
+      />
       {documentEditor}
     </div>
   );

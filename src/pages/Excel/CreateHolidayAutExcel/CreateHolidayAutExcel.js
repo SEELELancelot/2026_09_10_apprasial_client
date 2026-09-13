@@ -1,14 +1,10 @@
-import {DocumentEditor} from "@onlyoffice/document-editor-react";
-import {useEffect, useState} from "react";
+import {useEffect, useRef, useState} from "react";
 import ROUTENAME from "../../../../config/routesName";
 import {history,useModel} from "@umijs/max";
-import { Modal } from 'antd';
+import { Modal, Spin } from 'antd';
 
 import {
-  AppraisalAutExcelCallBack, createExportAutExcel,
-  documentUrl,
-  mybaseUrl,
-  onlyOfficeServer,
+  createExportAutExcel,
 } from '@/networkReuest/Myaxios';
 import {InitDataFetchMethod} from "@/getInitDropDown/getInitDropDown";
 import {ScaleTransform} from "../../../../utils/ScaleTransform";
@@ -16,21 +12,15 @@ import {ScaleTransform} from "../../../../utils/ScaleTransform";
 const CreateHolidayAutExcel = () => {
   const { initialState } = useModel('@@initialState');
 
-  // 初始預設 Excel 檔案為空白範本
-  const [userDoc, setUserDoc] = useState(`${documentUrl}/office/excel/空白.xlsx`);
-  const [editorId] = useState("HolidayEditor");
-
-  const onDocumentReady = function () {
-    console.warn("🎉 Holiday Bonus Excel Document is loaded");
-  };
-
-  const onLoadComponentError = function (errorCode, errorDescription) {
-    console.error(`OnlyOffice load error: ${errorCode}`, errorDescription);
-  };
+  const hasGeneratedRef = useRef(false);
+  const [loading, setLoading] = useState(true);
+  const [loadingText, setLoadingText] = useState('正在建立中秋獎金調查表...');
 
   const generateNewExcel = async () => {
     let result;
     try {
+      setLoading(true);
+      setLoadingText('正在建立中秋獎金調查表...');
       result = await createExportAutExcel();
     } catch (error) {
       if (error?.response?.data?.code === 'EXCEL_TYPE_DISABLED') {
@@ -55,21 +45,7 @@ const CreateHolidayAutExcel = () => {
     const { success, excelName, excelId } = result.data || {};
 
     if (success === 1 && excelId) {
-      const pathName = `${documentUrl}/office/excel/EmployeeAutExcel/${excelName}`;
-      setUserDoc(pathName);
-
-      const loginUser = initialState?.user || {};
-      const callbackUrl =
-        `${mybaseUrl}/${AppraisalAutExcelCallBack}` +
-        `?documentName=${encodeURIComponent(excelName || '')}` +
-        `&excelId=${encodeURIComponent(excelId)}` +
-        `&approvalId=` +
-        `&approvalStepId=` +
-        `&editRoundKey=draft_0` +
-        `&editorUserId=${encodeURIComponent(loginUser?.USER_ID || '')}` +
-        `&editorUserName=${encodeURIComponent(loginUser?.USER_NAME || '')}` +
-        `&editorMissName=${encodeURIComponent(loginUser?.MISS_NAME || '')}` +
-        `&editorBranchName=${encodeURIComponent(loginUser?.BRANCH_NAME || '')}`;
+      setLoadingText('正在開啟 OnlyOffice 編輯器...');
 
       // ✅ 中秋 Excel 建立成功後，通知原本列表頁刷新
       window.opener?.postMessage(
@@ -86,70 +62,9 @@ const CreateHolidayAutExcel = () => {
         `${ROUTENAME.PreviewAppraisalAutExcel}?DocumentId=${encodeURIComponent(excelId)}`,
       );
       return;
-
-      setTimeout(() => {
-        setDocumentEditor(
-          <DocumentEditor
-            style={{ width: '100%', height: '100%' }}
-            id={editorId}
-            documentServerUrl={onlyOfficeServer}
-            config={{
-              document: {
-                fileType: "xlsx",
-                title: "獎金發放調查紀錄",
-                url: pathName,
-                key: `${excelId}_draft_0_draft_0`,
-                permissions: {
-                  chat: true,
-                  edit: true,
-                  download: true,
-                  print: true,
-                },
-              },
-              editorConfig: {
-                callbackUrl,
-                mode: "edit",
-                coEditing: {
-                  mode: "fast",
-                  change: true,
-                },
-                customization: {
-                  autosave: true,
-                  forcesave: true,
-                  anonymous: { request: false },
-                  comments: true,
-                  compactHeader: false,
-                  compactToolbar: false,
-                  compatibleFeatures: false,
-                  help: false,
-                  hideRightMenu: true,
-                  hideRulers: true,
-                  integrationMode: "embed",
-                  logo: { url: "" },
-                  macros: true,
-                  macrosMode: "Warn",
-                  mentionShare: true,
-                  mobileForceView: true,
-                  plugins: false,
-                  toolbarHideFileName: false,
-                  toolbarNoTabs: false,
-                  zoom: ScaleTransform.getOnlyOfficeZoom(1.1),
-                },
-                lang: "zh-tw",
-                user: {
-                  id: initialState?.user?.USER_ID,
-                  name: initialState?.user?.USER_NAME,
-                },
-              },
-            }}
-            events_onDocumentReady={onDocumentReady}
-            onLoadComponentError={onLoadComponentError}
-          />
-        );
-      }, 300);
-      return;
     }
 
+    setLoading(false);
     Modal.error({
       title: '建立失敗',
       content: '無法建立中秋獎金調查表，請稍後再試。',
@@ -165,65 +80,21 @@ const CreateHolidayAutExcel = () => {
     }
 
     // 首次進入 → 建立新 Excel
+    if (hasGeneratedRef.current) return;
+
     if (window.name === "") {
+      hasGeneratedRef.current = true;
       window.name = "isReload";
       generateNewExcel();
     }
     // 已建立 → 頁面刷新
     else if (window.name === "isReload") {
+      hasGeneratedRef.current = true;
       console.log("🔁 page refresh....");
       history.push(ROUTENAME.employee_appraisalTabs); //
       InitDataFetchMethod.AllTableData(); // ✅ fetch模型
     }
   }, []);
-
-  const [documentEditor, setDocumentEditor] = useState(
-    <DocumentEditor
-      style={{ width: '100%', height: '100%' }} // ✅ 用 CSS 控制高度
-      id={editorId}
-      documentServerUrl={onlyOfficeServer}
-      config={{
-        document: {
-          fileType: "xlsx",
-          title: "獎金發放調查紀錄",
-          url: userDoc,
-          permissions: {
-            chat: true,
-          },
-        },
-        editorConfig: {
-          customization: {
-            anonymous: { request: false },
-            comments: true,
-            compactHeader: false,
-            compactToolbar: false,
-            compatibleFeatures: false,
-            help: false,
-            hideRightMenu: true,
-            hideRulers: true,
-            integrationMode: "embed",
-            logo: { url: "" },
-            macros: true,
-            macrosMode: "Warn",
-            mentionShare: true,
-            mobileForceView: true,
-            plugins: false,
-            toolbarHideFileName: false,
-            toolbarNoTabs: false,
-            zoom: ScaleTransform.getOnlyOfficeZoom(1.1), // 可選擇放大 10%
-          },
-          lang: "zh-tw",
-          user: {
-            id: initialState?.user?.USER_ID,
-            name: initialState?.user?.USER_NAME,
-          },
-          mode: "edit",
-        },
-      }}
-      events_onDocumentReady={onDocumentReady}
-      onLoadComponentError={onLoadComponentError}
-    />
-  );
 
   return (
     <div
@@ -238,7 +109,12 @@ const CreateHolidayAutExcel = () => {
         background: "#fff",
       }}
     >
-      {documentEditor}
+      {loading && (
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16 }}>
+          <Spin size="large" />
+          <span>{loadingText}</span>
+        </div>
+      )}
     </div>
   )
 };

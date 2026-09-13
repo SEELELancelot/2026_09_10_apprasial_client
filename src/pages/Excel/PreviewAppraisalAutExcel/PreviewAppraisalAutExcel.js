@@ -10,7 +10,11 @@ import {
 import ROUTENAME from "../../../../config/routesName";
 import { DocumentEditor } from "@onlyoffice/document-editor-react";
 import { history, useModel } from "@umijs/max";
+import { Alert, Button, Space, Spin } from "antd";
 import { ScaleTransform } from "../../../../utils/ScaleTransform";
+import { MyUtils } from "@/publicMethod/Utils";
+import { useOnlyOfficePreviewGuard } from "@/hooks/useOnlyOfficePreviewGuard";
+import OnlyOfficeStatusNotice from "@/components/OnlyOfficeStatusNotice";
 
 const PreviewAppraisalAutExcel = () => {
   const { initialState } = useModel("@@initialState");
@@ -18,14 +22,21 @@ const PreviewAppraisalAutExcel = () => {
   const editorId = "Editor";
 
   const [documentEditor, setDocumentEditor] = useState(null);
-  // 同一帳號多開分頁時，OnlyOffice 需要把每個分頁當作獨立協作者；
-  // 文件 key 仍相同，因此內容會即時同步而非各自保有一份舊畫面。
-  const [onlyOfficeSessionId] = useState(
-    () => `${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`,
-  );
-
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+  const [fallbackDownload, setFallbackDownload] = useState(null);
+  const documentId = new URL(window.location.href).searchParams.get("DocumentId");
+  const {
+    leaseReady,
+    leaseError,
+    isOnline,
+    isEditable,
+    accessRevoked,
+    setEditable,
+  } = useOnlyOfficePreviewGuard(documentId);
   const onDocumentReady = function () {
     console.warn("Document is loaded");
+    setLoading(false);
   };
 
   // 不讓 OnlyOffice 在 iframe 內用舊 session 自行重載檔案。
@@ -45,6 +56,8 @@ const PreviewAppraisalAutExcel = () => {
   };
 
   const onLoadComponentError = function (errorCode, errorDescription) {
+    setLoading(false);
+    setLoadError(errorDescription || `OnlyOffice 載入失敗（錯誤碼 ${errorCode}）`);
     switch (errorCode) {
       case -1:
         console.log("Unknown error loading component:", errorDescription);
@@ -274,6 +287,8 @@ const PreviewAppraisalAutExcel = () => {
               modifyContentControl: false,
               modifyFilter: false,
               fillForms: false,
+              // 隱藏協作者清單、游標名稱與彩色多人提示，保留即時共同編輯。
+              userInfoGroups: [],
             },
           },
 
@@ -281,7 +296,8 @@ const PreviewAppraisalAutExcel = () => {
             mode: officeMode,
             coEditing: {
               mode: "fast",
-              change: true,
+              // 統一鎖定即時同步，避免瀏覽器記住 strict 模式後各分頁畫面不同。
+              change: false,
             },
 
             ...(callbackUrl ? { callbackUrl } : {}),
@@ -317,7 +333,8 @@ const PreviewAppraisalAutExcel = () => {
             lang: "zh-tw",
 
             user: {
-              id: `${loginUser?.USER_ID || 'anonymous'}_${onlyOfficeSessionId}`,
+              // 同一登入者在不同分頁使用同一 ID，避免被顯示成多名協作者。
+              id: String(loginUser?.USER_ID || "anonymous"),
               name: loginUser?.USER_NAME,
             },
           },
@@ -336,8 +353,11 @@ const PreviewAppraisalAutExcel = () => {
                                     historyVersionId,
                                     loginUser,
                                   }) => {
+    setEditable(false);
     if (!historyVersionId) {
       console.warn("缺少 historyVersionId");
+      setLoading(false);
+      setLoadError("缺少歷史文件版本資料");
       return;
     }
 
@@ -350,6 +370,8 @@ const PreviewAppraisalAutExcel = () => {
 
     if (success !== 1) {
       console.warn("查無歷史文件版本", result.data);
+      setLoading(false);
+      setLoadError(result?.data?.message || "查無歷史文件");
       return;
     }
 
@@ -359,6 +381,8 @@ const PreviewAppraisalAutExcel = () => {
 
     if (!fileUrl) {
       console.warn("歷史文件路徑不存在");
+      setLoading(false);
+      setLoadError("歷史文件路徑不存在");
       return;
     }
 
@@ -366,6 +390,7 @@ const PreviewAppraisalAutExcel = () => {
     console.log("historyVersionId =", historyVersionId);
     console.log("fileUrl =", fileUrl);
     console.log("version =", version);
+    setFallbackDownload({ fileUrl, fileName: excelName });
 
     setTimeout(() => {
       setDocumentEditor(
@@ -393,6 +418,8 @@ const PreviewAppraisalAutExcel = () => {
 
     if (success !== 1) {
       console.warn("查無 Excel 資料", result.data);
+      setLoading(false);
+      setLoadError(result?.data?.message || "查無中秋獎金調查表");
       return;
     }
 
@@ -401,6 +428,8 @@ const PreviewAppraisalAutExcel = () => {
 
     if (!excelName) {
       console.warn("缺少 excel_Name");
+      setLoading(false);
+      setLoadError("文件名稱遺失，無法開啟中秋獎金調查表");
       return;
     }
 
@@ -409,12 +438,14 @@ const PreviewAppraisalAutExcel = () => {
       : encodeURI(
           `${documentUrl}/office/excel/EmployeeAutExcel/${excelName}`,
         );
+    setFallbackDownload({ fileUrl, fileName: excelName });
 
     const officeMode = getOfficeMode({
       excelData,
       loginUser,
       isHistoryPreview: false,
     });
+    setEditable(officeMode === "edit");
 
     const callbackUrl = buildCallbackUrl({
       excelName,
@@ -460,6 +491,8 @@ const PreviewAppraisalAutExcel = () => {
 
       if (!documentId) {
         console.warn("缺少 DocumentId");
+        setLoading(false);
+        setLoadError("缺少文件識別碼");
         history.replace(ROUTENAME.employee_appraisalTabs);
         return;
       }
@@ -482,6 +515,8 @@ const PreviewAppraisalAutExcel = () => {
       });
     } catch (e) {
       console.error(e);
+      setLoading(false);
+      setLoadError(e?.response?.data?.message || e?.message || "讀取中秋獎金調查表失敗");
     }
   };
 
@@ -492,11 +527,35 @@ const PreviewAppraisalAutExcel = () => {
       return history.replace(ROUTENAME.Login);
     }
 
-    const params = new URL(window.location.href).searchParams;
-    const documentId = params.get("DocumentId");
+    if (leaseError) {
+      setLoading(false);
+      return undefined;
+    }
+
+    if (!leaseReady) {
+      return undefined;
+    }
 
     getExcelNameFetch(documentId);
-  }, []);
+    return undefined;
+  }, [leaseReady, leaseError]);
+
+  // DocumentEditor 的 script 或 iframe 偶爾不會拋出錯誤事件。不能讓畫面
+  // 永遠停在轉圈；逾時後保留重新預覽與直接下載兩條可恢復路徑。
+  useEffect(() => {
+    if (!loading || !documentEditor) {
+      return undefined;
+    }
+
+    const timer = window.setTimeout(() => {
+      setLoading(false);
+      setLoadError(
+        "ONLYOFFICE 預覽服務回應較慢或暫時無法連線，請重新嘗試；原始 Excel 仍可直接下載。",
+      );
+    }, 20000);
+
+    return () => window.clearTimeout(timer);
+  }, [loading, documentEditor]);
 
   return (
     <div
@@ -511,6 +570,58 @@ const PreviewAppraisalAutExcel = () => {
         background: "#fff",
       }}
     >
+      <OnlyOfficeStatusNotice
+        leaseError={leaseError}
+        isOnline={isOnline}
+        isEditable={isEditable}
+        accessRevoked={accessRevoked}
+      />
+      {loading && (
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            zIndex: 2,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 16,
+            background: "#fff",
+          }}
+        >
+          <Spin size="large" />
+          <span>正在開啟中秋獎金調查表…</span>
+        </div>
+      )}
+      {loadError && (
+        <div style={{ position: "absolute", inset: 24, zIndex: 3 }}>
+          <Alert
+            type="error"
+            showIcon
+            message="無法開啟中秋獎金調查表"
+            description={loadError}
+            action={
+              <Space wrap>
+                <Button onClick={() => window.location.reload()}>重新預覽</Button>
+                {fallbackDownload?.fileUrl && (
+                  <Button
+                    type="primary"
+                    onClick={() =>
+                      MyUtils.fileDownload(
+                        fallbackDownload.fileUrl,
+                        fallbackDownload.fileName || "中秋獎金調查表.xlsx",
+                      )
+                    }
+                  >
+                    下載 Excel
+                  </Button>
+                )}
+              </Space>
+            }
+          />
+        </div>
+      )}
       {documentEditor}
     </div>
   );

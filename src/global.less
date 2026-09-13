@@ -129,8 +129,85 @@
 
 }
 
+// 桌面視窗縮窄、側邊欄仍展開時，內容實際寬度不足以同時容納分類、標題與按鈕。
+// 標題改為獨佔第一列，避免絕對定位覆蓋分類文字。
+@media screen and (min-width: 769px) and (max-width: 1100px) {
+  .appraisal-page-header {
+    gap: 12px;
+  }
+
+  .appraisal-page-title {
+    position: static !important;
+    order: -1;
+    width: 100%;
+    transform: none !important;
+    text-align: center;
+  }
+
+  .appraisal-page-tabs {
+    min-width: 0 !important;
+  }
+
+  .appraisal-page-create {
+    min-width: auto !important;
+    white-space: nowrap;
+  }
+}
+
 //手機
 @media screen and (max-width: 768px) {
+  .appraisal-page-header {
+    gap: 12px;
+    margin-bottom: 12px !important;
+  }
+
+  .appraisal-page-title {
+    position: static !important;
+    order: -2;
+    width: 100%;
+    transform: none !important;
+    text-align: center;
+
+    h2 {
+      font-size: 20px !important;
+      line-height: 1.4;
+    }
+  }
+
+  .appraisal-page-tabs {
+    order: 0;
+    min-width: 0 !important;
+    flex: 1 1 100% !important;
+
+    .ant-form-item {
+      margin-bottom: 0;
+    }
+
+    .ant-radio-group {
+      display: flex;
+      justify-content: space-between;
+      width: 100%;
+    }
+
+    .ant-radio-wrapper {
+      margin-inline-end: 0;
+      font-size: 15px;
+    }
+  }
+
+  .appraisal-page-create {
+    order: 1;
+    min-width: 0 !important;
+    width: 100%;
+    text-align: stretch !important;
+
+    .ant-btn {
+      width: 100%;
+      min-height: 40px;
+      font-size: 16px;
+    }
+  }
+
   .ToolbarButtonUpdateStyle{
     margin-left: 5px;
   }

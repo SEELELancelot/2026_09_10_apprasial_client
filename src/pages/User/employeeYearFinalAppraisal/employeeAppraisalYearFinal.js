@@ -92,6 +92,7 @@ const EmployeeAppraisalYearFinal = () => {
   const [displayRows, setDisplayRows] = useState(currentRows);
   const [tableLoading, setTableLoading] = useState(false);
   const [downloadingExcelId, setDownloadingExcelId] = useState(null);
+  const downloadInFlightRef = useRef(false);
 
   latestRowsRef.current = currentRows;
 
@@ -104,7 +105,8 @@ const EmployeeAppraisalYearFinal = () => {
   const isExcelTypeDisabled = (typeId) => {
     const status = disableExcelSnap.disableExcel || {};
     if (status.isLoading || !Array.isArray(status.data) || status.data.length === 0) {
-      return true;
+      // 實際建立前會再由後端檢查，這裡維持按鈕外觀避免切換閃爍。
+      return false;
     }
 
     const found = status.data.find((item) => Number(item.id) === Number(typeId));
@@ -142,12 +144,15 @@ const EmployeeAppraisalYearFinal = () => {
   };
 
   const handleDownloadLatestExcel = async (row) => {
+    if (downloadInFlightRef.current) return;
+
     const excelId = row?.excel_id;
     if (!excelId) {
       message.error('找不到 Excel 資料');
       return;
     }
 
+    downloadInFlightRef.current = true;
     setDownloadingExcelId(excelId);
     try {
       const result = await prepareLatestExcelDownload(excelId);
@@ -166,6 +171,7 @@ const EmployeeAppraisalYearFinal = () => {
     } catch (error) {
       message.error(error?.response?.data?.message || '下載最新 Excel 失敗');
     } finally {
+      downloadInFlightRef.current = false;
       setDownloadingExcelId(null);
     }
   };
@@ -896,6 +902,7 @@ const EmployeeAppraisalYearFinal = () => {
               <Button
                 type="primary"
                 loading={downloadingExcelId === item?.excel_id}
+                disabled={downloadingExcelId !== null}
                 onClick={() => handleDownloadLatestExcel(item)}
               >
                 下載
@@ -1027,6 +1034,7 @@ const EmployeeAppraisalYearFinal = () => {
   return (
     <div className="EditTableStyle">
       <div
+        className="appraisal-page-header"
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -1037,14 +1045,14 @@ const EmployeeAppraisalYearFinal = () => {
           marginBottom: '16px',
         }}
       >
-        <div style={{ flex: 1, minWidth: '280px' }}>
+        <div className="appraisal-page-tabs" style={{ flex: 1, minWidth: '280px' }}>
           <Form form={form} name="radio-form" onFinish={onFinish}>
             <Form.Item
               name="options"
               label=""
               initialValue={TableConstants.employeeAppraisalYearFinal}
             >
-              <Radio.Group>
+              <Radio.Group value={TableConstants.employeeAppraisalYearFinal}>
                 <Radio
                   value={TableConstants.employeeAppraisalUsually}
                   onChange={() => {
@@ -1083,6 +1091,7 @@ const EmployeeAppraisalYearFinal = () => {
         </div>
 
         <div
+          className="appraisal-page-title"
           style={{
             position: 'absolute',
             left: '50%',
@@ -1093,7 +1102,7 @@ const EmployeeAppraisalYearFinal = () => {
           <h2 style={{ margin: 0, color: 'purple',fontSize:24 }}>員工年度考核紀錄</h2>
         </div>
 
-        <div style={{ minWidth: '180px', textAlign: 'right' }}>
+        <div className="appraisal-page-create" style={{ minWidth: '180px', textAlign: 'right' }}>
           {(initialState?.user?.admin_type === '0' ||
             initialState?.user?.MISS_NAME === '總幹事') && (
             <Button
@@ -1154,9 +1163,7 @@ const EmployeeAppraisalYearFinal = () => {
                 }
               }}
             >
-              {isExcelTypeDisabled(2)
-                ? '年度考核表未開放'
-                : '新建考核表'}
+              新建年度考核
             </Button>
           )}
         </div>
@@ -1207,7 +1214,6 @@ const EmployeeAppraisalYearFinal = () => {
                     type="primary"
                     size="small"
                     disabled={approvalLoading}
-                    loading={approvalLoading}
                     onClick={() => openBatchSignModal('approve')}
                   >
                     批次同意
@@ -1217,7 +1223,6 @@ const EmployeeAppraisalYearFinal = () => {
                     size="small"
                     danger
                     disabled={approvalLoading}
-                    loading={approvalLoading}
                     onClick={() => openBatchSignModal('return')}
                   >
                     批次退回

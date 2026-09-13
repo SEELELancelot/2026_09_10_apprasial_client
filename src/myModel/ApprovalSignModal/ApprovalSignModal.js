@@ -1,5 +1,6 @@
 import { Modal, Button, Input, message, Tabs, Popover } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
+import { MyUtils } from '@/publicMethod/Utils';
 
 const { TextArea } = Input;
 
@@ -124,6 +125,9 @@ const ApprovalSignModal = ({
     steps = [],
     logs = [],
   } = approvalInfo || {};
+
+  // 顯示方式與清單一致；實際檔名仍保留時間戳供預覽、下載及版本辨識。
+  const displayDocumentTitle = MyUtils.formatExcelDisplayName(documentTitle);
 
   /**
    * ✅ 修正抽單後，再點「送出簽核」時內容空白的問題
@@ -404,7 +408,7 @@ const ApprovalSignModal = ({
           <div className="mb-2 rounded border bg-gray-50 p-2 text-sm text-gray-700">
             <div>
               <span className="font-semibold">文件名稱：</span>
-              {documentTitle || '-'}
+              {displayDocumentTitle || '-'}
             </div>
 
             <div>
@@ -905,7 +909,7 @@ const ApprovalSignModal = ({
                   文件名稱
                 </td>
                 <td className="border border-gray-300 px-3 py-2">
-                  {documentTitle || '-'}
+                  {displayDocumentTitle || '-'}
                 </td>
               </tr>
 
@@ -1017,7 +1021,7 @@ const ApprovalSignModal = ({
           <div className="grid grid-cols-1 gap-2 text-sm md:grid-cols-2">
             <div className="md:col-span-2">
               <span className="font-semibold text-gray-600">文件名稱：</span>
-              <span className="text-gray-800">{documentTitle || '-'}</span>
+              <span className="text-gray-800">{displayDocumentTitle || '-'}</span>
             </div>
 
             <div>

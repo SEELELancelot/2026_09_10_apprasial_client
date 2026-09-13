@@ -59,7 +59,9 @@ export default defineConfig({
 
     theme: {
       token: {
-        fontSize: 16
+        fontSize: 16,
+        // 關閉 Ant Design 元件的縮放／淡入動畫，Modal 第一幀即為最終尺寸。
+        motion: false,
       },
     }
   },

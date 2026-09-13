@@ -24,15 +24,14 @@ if (window.location.host.indexOf('192.168') > -1) {
   documentUrl = `http://192.168.0.87:${serverPort}`;
   onlyOfficeServer = 'http://192.168.0.87:7000';
 } else if (window.location.host.indexOf('localhost') > -1) {
-  mybaseUrl = `http://192.168.0.185:${serverPort}`;
-  documentUrl = `http://192.168.0.185:${serverPort}`;
-  onlyOfficeServer = 'http://192.168.0.87:7000';
+  mybaseUrl = `http://192.168.1.109:${serverPort}`;
+  documentUrl = `http://192.168.1.109:${serverPort}`;
+  onlyOfficeServer = 'http://192.168.1.109:7016';
 } else {
   mybaseUrl = `http://192.168.0.87:${serverPort}`;
   documentUrl = `http://192.168.0.87:${serverPort}`;
   onlyOfficeServer = 'http://192.168.0.87:7000';
 }
-
 const axiosInstance = axios.create({
   baseURL: mybaseUrl,
 });
@@ -188,6 +187,18 @@ const prepareLatestExcelDownload = async (excelId) => {
 
   return result;
 };
+
+const acquireOnlyOfficePreview = async (documentId, tabId) =>
+  axiosInstance.post('office/acquireOnlyOfficePreview', { documentId, tabId });
+
+const heartbeatOnlyOfficePreview = async (documentId, tabId) =>
+  axiosInstance.post('office/heartbeatOnlyOfficePreview', { documentId, tabId });
+
+const releaseOnlyOfficePreview = async (documentId, tabId) =>
+  axiosInstance.post('office/releaseOnlyOfficePreview', { documentId, tabId });
+
+const checkpointOnlyOfficeDocument = async (documentId) =>
+  axiosInstance.post('office/checkpointOnlyOfficeDocument', { documentId });
 
 const deleteExcelById = async (id) => {
   const result = await axiosInstance.post('office/deleteExcelById', {
@@ -387,6 +398,10 @@ export {
   getDropDownYear,
   getExcelNameById,
   prepareLatestExcelDownload,
+  acquireOnlyOfficePreview,
+  heartbeatOnlyOfficePreview,
+  releaseOnlyOfficePreview,
+  checkpointOnlyOfficeDocument,
   getYearAppraisalTableFetch,
 
   mergeAppraisalExcel,

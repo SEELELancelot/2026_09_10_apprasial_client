@@ -76,6 +76,7 @@ const EmployeeBonusSurvey = () => {
   const [displayRows, setDisplayRows] = useState(currentRows);
   const [tableLoading, setTableLoading] = useState(false);
   const [downloadingExcelId, setDownloadingExcelId] = useState(null);
+  const downloadInFlightRef = useRef(false);
 
   latestRowsRef.current = currentRows;
 
@@ -88,7 +89,8 @@ const EmployeeBonusSurvey = () => {
   const isExcelTypeDisabled = (typeId) => {
     const status = disableExcelSnap.disableExcel || {};
     if (status.isLoading || !Array.isArray(status.data) || status.data.length === 0) {
-      return true;
+      // 建立時仍會即時驗證，不以短暫載入狀態改變按鈕文字或顏色。
+      return false;
     }
 
     const found = status.data.find((item) => Number(item.id) === Number(typeId));
@@ -126,12 +128,15 @@ const EmployeeBonusSurvey = () => {
   };
 
   const handleDownloadLatestExcel = async (row) => {
+    if (downloadInFlightRef.current) return;
+
     const excelId = row?.excel_id;
     if (!excelId) {
       message.error('找不到 Excel 資料');
       return;
     }
 
+    downloadInFlightRef.current = true;
     setDownloadingExcelId(excelId);
     try {
       const result = await prepareLatestExcelDownload(excelId);
@@ -150,6 +155,7 @@ const EmployeeBonusSurvey = () => {
     } catch (error) {
       message.error(error?.response?.data?.message || '下載最新 Excel 失敗');
     } finally {
+      downloadInFlightRef.current = false;
       setDownloadingExcelId(null);
     }
   };
@@ -846,6 +852,7 @@ const EmployeeBonusSurvey = () => {
               <Button
                 type="primary"
                 loading={downloadingExcelId === item?.excel_id}
+                disabled={downloadingExcelId !== null}
                 onClick={() => handleDownloadLatestExcel(item)}
               >
                 下載
@@ -980,6 +987,7 @@ const EmployeeBonusSurvey = () => {
   return (
     <div className="EditTableStyle">
       <div
+        className="appraisal-page-header"
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -990,14 +998,14 @@ const EmployeeBonusSurvey = () => {
           marginBottom: '16px',
         }}
       >
-        <div style={{ flex: 1, minWidth: '300px' }}>
+        <div className="appraisal-page-tabs" style={{ flex: 1, minWidth: '300px' }}>
           <Form form={form} name="radio-form" onFinish={onFinish}>
             <Form.Item
               name="options"
               label=""
               initialValue={TableConstants.employeeBonusSurvey}
             >
-              <Radio.Group>
+              <Radio.Group value={TableConstants.employeeBonusSurvey}>
                 <Radio
                   value={TableConstants.employeeAppraisalUsually}
                   onChange={() =>
@@ -1036,6 +1044,7 @@ const EmployeeBonusSurvey = () => {
         </div>
 
         <div
+          className="appraisal-page-title"
           style={{
             position: 'absolute',
             left: '50%',
@@ -1048,7 +1057,7 @@ const EmployeeBonusSurvey = () => {
           </h2>
         </div>
 
-        <div style={{ minWidth: '180px', textAlign: 'right' }}>
+        <div className="appraisal-page-create" style={{ minWidth: '180px', textAlign: 'right' }}>
           {(initialState?.user?.admin_type === '0' ||
               initialState?.user?.MISS_NAME === '總幹事') &&
             (() => {
@@ -1204,7 +1213,6 @@ const EmployeeBonusSurvey = () => {
                     type="primary"
                     size="small"
                     disabled={approvalLoading}
-                    loading={approvalLoading}
                     onClick={() => openBatchSignModal('approve')}
                   >
                     批次同意
@@ -1214,7 +1222,6 @@ const EmployeeBonusSurvey = () => {
                     size="small"
                     danger
                     disabled={approvalLoading}
-                    loading={approvalLoading}
                     onClick={() => openBatchSignModal('return')}
                   >
                     批次退回
