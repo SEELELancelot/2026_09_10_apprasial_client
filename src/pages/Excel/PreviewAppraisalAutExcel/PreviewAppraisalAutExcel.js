@@ -5,16 +5,16 @@ import {
   getExcelNameById,
   getExcelFileVersionById,
   mybaseUrl,
+  onlyOfficeCallbackBaseUrl,
   onlyOfficeServer,
 } from "@/networkReuest/Myaxios";
 import ROUTENAME from "../../../../config/routesName";
 import { DocumentEditor } from "@onlyoffice/document-editor-react";
 import { history, useModel } from "@umijs/max";
-import { Alert, Button, Space, Spin } from "antd";
 import { ScaleTransform } from "../../../../utils/ScaleTransform";
-import { MyUtils } from "@/publicMethod/Utils";
 import { useOnlyOfficePreviewGuard } from "@/hooks/useOnlyOfficePreviewGuard";
 import OnlyOfficeStatusNotice from "@/components/OnlyOfficeStatusNotice";
+import OnlyOfficePreviewFeedback from "@/components/OnlyOfficePreviewFeedback";
 
 const PreviewAppraisalAutExcel = () => {
   const { initialState } = useModel("@@initialState");
@@ -104,7 +104,7 @@ const PreviewAppraisalAutExcel = () => {
 
     if (!cleanPath) return "";
 
-    return encodeURI(`${mybaseUrl}/${cleanPath}`);
+    return encodeURI(`${documentUrl}/${cleanPath}`);
   };
 
   /**
@@ -223,7 +223,7 @@ const PreviewAppraisalAutExcel = () => {
     const editRoundKey = buildEditRoundKey({ excelData });
 
     return (
-      `${mybaseUrl}/${AppraisalAutExcelCallBack}` +
+      `${onlyOfficeCallbackBaseUrl}/${AppraisalAutExcelCallBack}` +
       `?documentName=${encodeURIComponent(excelName)}` +
       `&excelId=${encodeURIComponent(documentId || "")}` +
       `&approvalId=${encodeURIComponent(approvalId)}` +
@@ -256,9 +256,11 @@ const PreviewAppraisalAutExcel = () => {
 
     const documentKey = isHistoryPreview
       ? `history_${documentId}_${historyVersionId}_${Date.now()}`
-      : `${documentId}_${excelData?.approval_id || "draft"}_${
-        excelData?.current_step_id || "0"
-      }_${editRoundKey}_${excelData?.document_revision || "0"}`;
+      : officeMode === "view"
+        ? `preview_${documentId}_${excelData?.document_source_revision || excelData?.document_revision || "0"}`
+        : `${documentId}_${excelData?.approval_id || "draft"}_${
+          excelData?.current_step_id || "0"
+        }_${editRoundKey}_${excelData?.document_revision || "0"}`;
 
     return (
       <DocumentEditor
@@ -390,7 +392,10 @@ const PreviewAppraisalAutExcel = () => {
     console.log("historyVersionId =", historyVersionId);
     console.log("fileUrl =", fileUrl);
     console.log("version =", version);
-    setFallbackDownload({ fileUrl, fileName: excelName });
+    setFallbackDownload({
+      fileUrl: encodeURI(`${mybaseUrl}/${String(version?.version_file_path || "").replace(/^\/+/, "")}`),
+      fileName: excelName,
+    });
 
     setTimeout(() => {
       setDocumentEditor(
@@ -438,7 +443,12 @@ const PreviewAppraisalAutExcel = () => {
       : encodeURI(
           `${documentUrl}/office/excel/EmployeeAutExcel/${excelName}`,
         );
-    setFallbackDownload({ fileUrl, fileName: excelName });
+    setFallbackDownload({
+      fileUrl: excelData?.document_file_url
+        ? `${mybaseUrl}${excelData.document_file_url}`
+        : encodeURI(`${mybaseUrl}/office/excel/EmployeeAutExcel/${excelName}`),
+      fileName: excelName,
+    });
 
     const officeMode = getOfficeMode({
       excelData,
@@ -529,6 +539,7 @@ const PreviewAppraisalAutExcel = () => {
 
     if (leaseError) {
       setLoading(false);
+      setLoadError(leaseError);
       return undefined;
     }
 
@@ -576,52 +587,12 @@ const PreviewAppraisalAutExcel = () => {
         isEditable={isEditable}
         accessRevoked={accessRevoked}
       />
-      {loading && (
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            zIndex: 2,
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 16,
-            background: "#fff",
-          }}
-        >
-          <Spin size="large" />
-          <span>正在開啟中秋獎金調查表…</span>
-        </div>
-      )}
-      {loadError && (
-        <div style={{ position: "absolute", inset: 24, zIndex: 3 }}>
-          <Alert
-            type="error"
-            showIcon
-            message="無法開啟中秋獎金調查表"
-            description={loadError}
-            action={
-              <Space wrap>
-                <Button onClick={() => window.location.reload()}>重新預覽</Button>
-                {fallbackDownload?.fileUrl && (
-                  <Button
-                    type="primary"
-                    onClick={() =>
-                      MyUtils.fileDownload(
-                        fallbackDownload.fileUrl,
-                        fallbackDownload.fileName || "中秋獎金調查表.xlsx",
-                      )
-                    }
-                  >
-                    下載 Excel
-                  </Button>
-                )}
-              </Space>
-            }
-          />
-        </div>
-      )}
+      <OnlyOfficePreviewFeedback
+        loading={loading}
+        error={loadError}
+        title="中秋獎金調查表"
+        fallbackDownload={fallbackDownload}
+      />
       {documentEditor}
     </div>
   );

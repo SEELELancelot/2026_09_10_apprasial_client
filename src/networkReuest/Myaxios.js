@@ -2,8 +2,43 @@ import axios from 'axios';
 
 const ExcelAddPassword = `my55phmelu-436ymyu36ykmq[q;APjk5(&`;
 
-let serverPort = 7511;
-let mybaseUrl = ``;
+// Umi define 會把設定物件注入為 JSON 字串；先解析，否則 .apiBaseUrl 會是
+// undefined，Axios 便退回前端的 localhost:8000。
+const builtRuntimeConfig = JSON.parse(process.env.APP_RUNTIME_CONFIG || "{}");
+const serverPort = 7511;
+const isLocalClient = ["localhost", "127.0.0.1", "::1"].includes(
+  window.location.hostname,
+);
+const localRuntimeConfig = {
+  apiBaseUrl: "http://localhost:7511",
+  // ONLYOFFICE 在 Docker 容器內，不能用 localhost 回到 Windows 主機。
+  documentBaseUrl: "http://host.docker.internal:7511",
+  onlyOfficeCallbackBaseUrl: "http://host.docker.internal:7511",
+  onlyOfficeServer: "http://localhost:7016",
+};
+const lanRuntimeConfig = {
+  apiBaseUrl: "http://192.168.0.87:7511",
+  documentBaseUrl: "http://192.168.0.87:7511",
+  onlyOfficeCallbackBaseUrl: "http://192.168.0.87:7511",
+  onlyOfficeServer: "http://192.168.0.87:7000",
+};
+// Axios 與 OnlyOffice 依使用者實際開啟 client 的主機切換：
+// localhost:8000 一律走本機；192.168.* 一律走 .87。即使開發伺服器被用
+// 192.168 網址開啟，也不會誤把 Axios 導回 localhost。
+const builtConfigIsLocal = ["localhost", "127.0.0.1"].some((host) =>
+  String(builtRuntimeConfig.apiBaseUrl || "").includes(host),
+);
+const runtimeConfig = isLocalClient
+  ? localRuntimeConfig
+  : builtConfigIsLocal
+    ? lanRuntimeConfig
+    : builtRuntimeConfig;
+
+// apiBaseUrl 是瀏覽器呼叫 API 的位置；document/callback 則必須是
+// ONLYOFFICE Docker 容器看得到的位置，兩者在本機開發時不能都寫 localhost。
+const mybaseUrl = runtimeConfig.apiBaseUrl;
+const documentUrl = runtimeConfig.documentBaseUrl;
+const onlyOfficeCallbackBaseUrl = runtimeConfig.onlyOfficeCallbackBaseUrl;
 
 let AppraisalRecordExcelCallback = `office/AppraisalRecordExcelCallback`;
 const AppraisalYearRecordExcelCallback = `office/AppraisalYearRecordExcelCallback`;
@@ -16,22 +51,7 @@ let EmployeeYearAppraisalExcelDirectory = `office/excel/EmployeeAppraisalExcelYe
 let EmployeeBonusExcelDirectory = `office/excel/EmployeeBonusExcel`;
 let EmployeeAutExcelDirectory = `office/excel/EmployeeAutExcel`;
 
-let onlyOfficeServer = ``;
-let documentUrl = `http://192.168.0.87:${serverPort}`;
-
-if (window.location.host.indexOf('192.168') > -1) {
-  mybaseUrl = `http://192.168.0.87:${serverPort}`;
-  documentUrl = `http://192.168.0.87:${serverPort}`;
-  onlyOfficeServer = 'http://192.168.0.87:7000';
-} else if (window.location.host.indexOf('localhost') > -1) {
-  mybaseUrl = `http://192.168.1.109:${serverPort}`;
-  documentUrl = `http://192.168.1.109:${serverPort}`;
-  onlyOfficeServer = 'http://192.168.1.109:7016';
-} else {
-  mybaseUrl = `http://192.168.0.87:${serverPort}`;
-  documentUrl = `http://192.168.0.87:${serverPort}`;
-  onlyOfficeServer = 'http://192.168.0.87:7000';
-}
+const onlyOfficeServer = runtimeConfig.onlyOfficeServer;
 const axiosInstance = axios.create({
   baseURL: mybaseUrl,
 });
@@ -178,7 +198,6 @@ const getExcelNameById = async (id) => {
 
   return result;
 };
-
 // 下載前先要求 ONLYOFFICE 將目前編輯中的內容寫回伺服器 Excel。
 const prepareLatestExcelDownload = async (excelId) => {
   const result = await axiosInstance.post('office/prepareLatestExcelDownload', {
@@ -410,6 +429,7 @@ export {
   mergeYearAppraisalExcel,
 
   mybaseUrl,
+  onlyOfficeCallbackBaseUrl,
   onlyOfficeServer,
   serverPort,
 

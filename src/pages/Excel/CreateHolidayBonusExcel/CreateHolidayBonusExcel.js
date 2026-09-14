@@ -9,6 +9,7 @@ import {
   createExportBonusExcel,
   documentUrl,
   mybaseUrl,
+  onlyOfficeCallbackBaseUrl,
   onlyOfficeServer,
 } from "@/networkReuest/Myaxios";
 
@@ -48,7 +49,7 @@ const CreateHolidayBonusExcel = () => {
     const loginUser = initialState?.user || {};
 
     return (
-      `${mybaseUrl}/${AppraisalBonusExcelCallBack}` +
+      `${onlyOfficeCallbackBaseUrl}/${AppraisalBonusExcelCallBack}` +
       `?documentName=${encodeURIComponent(excelName || "")}` +
       `&excelId=${encodeURIComponent(excelId || "")}` +
       `&approvalId=` +

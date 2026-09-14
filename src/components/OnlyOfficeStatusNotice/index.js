@@ -68,7 +68,7 @@ const OnlyOfficeStatusNotice = ({
         <Alert
           type="info"
           showIcon
-          message="此文件已送出或為歷史版本，目前僅供預覽，無法修改或儲存。"
+          message="此文件已送出或為歷史版本，僅供預覽，無法修改或儲存。"
         />
       </div>
     );

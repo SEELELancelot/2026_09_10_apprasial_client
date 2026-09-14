@@ -5,6 +5,7 @@ import {
   getExcelNameById,
   getExcelFileVersionById,
   mybaseUrl,
+  onlyOfficeCallbackBaseUrl,
   onlyOfficeServer,
 } from "@/networkReuest/Myaxios";
 import ROUTENAME from "../../../../config/routesName";
@@ -13,6 +14,7 @@ import { history, useModel } from "@umijs/max";
 import { ScaleTransform } from "../../../../utils/ScaleTransform";
 import { useOnlyOfficePreviewGuard } from "@/hooks/useOnlyOfficePreviewGuard";
 import OnlyOfficeStatusNotice from "@/components/OnlyOfficeStatusNotice";
+import OnlyOfficePreviewFeedback from "@/components/OnlyOfficePreviewFeedback";
 
 const PreviewAppraisalBonusExcel = () => {
   const { initialState } = useModel("@@initialState");
@@ -20,11 +22,15 @@ const PreviewAppraisalBonusExcel = () => {
   const editorId = "Editor";
 
   const [documentEditor, setDocumentEditor] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+  const [fallbackDownload, setFallbackDownload] = useState(null);
   const documentId = new URL(window.location.href).searchParams.get("DocumentId");
   const { leaseReady, leaseError, isOnline, isEditable, accessRevoked, setEditable } =
     useOnlyOfficePreviewGuard(documentId);
   const onDocumentReady = function () {
     console.warn("Document is loaded");
+    setLoading(false);
   };
 
   // 不讓 OnlyOffice 在 iframe 內用舊 session 自行重載檔案。
@@ -43,6 +49,8 @@ const PreviewAppraisalBonusExcel = () => {
   };
 
   const onLoadComponentError = function (errorCode, errorDescription) {
+    setLoading(false);
+    setLoadError(errorDescription || `ONLYOFFICE 載入失敗（錯誤碼 ${errorCode}）`);
     switch (errorCode) {
       case -1:
         console.log("Unknown error loading component:", errorDescription);
@@ -89,7 +97,7 @@ const PreviewAppraisalBonusExcel = () => {
 
     if (!cleanPath) return "";
 
-    return encodeURI(`${mybaseUrl}/${cleanPath}`);
+    return encodeURI(`${documentUrl}/${cleanPath}`);
   };
 
   /**
@@ -209,7 +217,7 @@ const PreviewAppraisalBonusExcel = () => {
     const editRoundKey = buildEditRoundKey({ excelData });
 
     return (
-      `${mybaseUrl}/${AppraisalBonusExcelCallBack}` +
+      `${onlyOfficeCallbackBaseUrl}/${AppraisalBonusExcelCallBack}` +
       `?documentName=${encodeURIComponent(excelName)}` +
       `&excelId=${encodeURIComponent(documentId || "")}` +
       `&approvalId=${encodeURIComponent(approvalId)}` +
@@ -242,9 +250,11 @@ const PreviewAppraisalBonusExcel = () => {
 
     const documentKey = isHistoryPreview
       ? `history_${documentId}_${historyVersionId}_${Date.now()}`
-      : `${documentId}_${excelData?.approval_id || "draft"}_${
-        excelData?.current_step_id || "0"
-      }_${editRoundKey}_${excelData?.document_revision || "0"}`;
+      : officeMode === "view"
+        ? `preview_${documentId}_${excelData?.document_source_revision || excelData?.document_revision || "0"}`
+        : `${documentId}_${excelData?.approval_id || "draft"}_${
+          excelData?.current_step_id || "0"
+        }_${editRoundKey}_${excelData?.document_revision || "0"}`;
 
     return (
       <DocumentEditor
@@ -343,6 +353,8 @@ const PreviewAppraisalBonusExcel = () => {
     setEditable(false);
     if (!historyVersionId) {
       console.warn("缺少 historyVersionId");
+      setLoading(false);
+      setLoadError("缺少歷史文件版本資料");
       return;
     }
 
@@ -355,6 +367,8 @@ const PreviewAppraisalBonusExcel = () => {
 
     if (success !== 1) {
       console.warn("查無歷史文件版本", result.data);
+      setLoading(false);
+      setLoadError(result?.data?.message || "查無歷史文件");
       return;
     }
 
@@ -364,6 +378,8 @@ const PreviewAppraisalBonusExcel = () => {
 
     if (!fileUrl) {
       console.warn("歷史文件路徑不存在");
+      setLoading(false);
+      setLoadError("歷史文件路徑不存在");
       return;
     }
 
@@ -371,6 +387,10 @@ const PreviewAppraisalBonusExcel = () => {
     console.log("historyVersionId =", historyVersionId);
     console.log("fileUrl =", fileUrl);
     console.log("version =", version);
+    setFallbackDownload({
+      fileUrl: encodeURI(`${mybaseUrl}/${String(version?.version_file_path || "").replace(/^\/+/, "")}`),
+      fileName: excelName,
+    });
 
     setTimeout(() => {
       setDocumentEditor(
@@ -398,6 +418,8 @@ const PreviewAppraisalBonusExcel = () => {
 
     if (success !== 1) {
       console.warn("查無 Excel 資料", result.data);
+      setLoading(false);
+      setLoadError(result?.data?.message || "查無獎金調查表");
       return;
     }
 
@@ -406,6 +428,8 @@ const PreviewAppraisalBonusExcel = () => {
 
     if (!excelName) {
       console.warn("缺少 excel_Name");
+      setLoading(false);
+      setLoadError("文件名稱遺失，無法開啟獎金調查表");
       return;
     }
 
@@ -414,6 +438,12 @@ const PreviewAppraisalBonusExcel = () => {
       : encodeURI(
           `${documentUrl}/office/excel/EmployeeBonusExcel/${excelName}`,
         );
+    setFallbackDownload({
+      fileUrl: excelData?.document_file_url
+        ? `${mybaseUrl}${excelData.document_file_url}`
+        : encodeURI(`${mybaseUrl}/office/excel/EmployeeBonusExcel/${excelName}`),
+      fileName: excelName,
+    });
 
     const officeMode = getOfficeMode({
       excelData,
@@ -488,6 +518,8 @@ const PreviewAppraisalBonusExcel = () => {
       });
     } catch (e) {
       console.error(e);
+      setLoading(false);
+      setLoadError(e?.response?.data?.message || e?.message || "讀取獎金調查表失敗");
     }
   };
 
@@ -498,10 +530,24 @@ const PreviewAppraisalBonusExcel = () => {
       return history.replace(ROUTENAME.Login);
     }
 
-    if (!leaseReady || leaseError) return undefined;
+    if (leaseError) {
+      setLoading(false);
+      setLoadError(leaseError);
+      return undefined;
+    }
+    if (!leaseReady) return undefined;
     getExcelNameFetch(documentId);
     return undefined;
   }, [leaseReady, leaseError]);
+
+  useEffect(() => {
+    if (!loading || !documentEditor) return undefined;
+    const timer = window.setTimeout(() => {
+      setLoading(false);
+      setLoadError("ONLYOFFICE 預覽服務未能完成載入，請重新預覽；您仍可直接下載 Excel。");
+    }, 20000);
+    return () => window.clearTimeout(timer);
+  }, [loading, documentEditor]);
 
   return (
     <div
@@ -521,6 +567,12 @@ const PreviewAppraisalBonusExcel = () => {
         isOnline={isOnline}
         isEditable={isEditable}
         accessRevoked={accessRevoked}
+      />
+      <OnlyOfficePreviewFeedback
+        loading={loading}
+        error={loadError}
+        title="獎金調查表"
+        fallbackDownload={fallbackDownload}
       />
       {documentEditor}
     </div>

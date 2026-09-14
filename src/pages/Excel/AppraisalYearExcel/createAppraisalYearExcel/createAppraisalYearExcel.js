@@ -8,6 +8,7 @@ import {
   createEmployeeYearFinalAppraisalExcel,
   documentUrl,
   mybaseUrl,
+  onlyOfficeCallbackBaseUrl,
   onlyOfficeServer,
 } from "@/networkReuest/Myaxios";
 
@@ -48,7 +49,7 @@ const CreateAppraisalYearExcel = () => {
     const loginUser = initialState?.user || {};
 
     return (
-      `${mybaseUrl}/${AppraisalYearRecordExcelCallback}` +
+      `${onlyOfficeCallbackBaseUrl}/${AppraisalYearRecordExcelCallback}` +
       `?documentName=${encodeURIComponent(excelName || "")}` +
       `&excelId=${encodeURIComponent(excelId || "")}` +
       `&approvalId=` +
