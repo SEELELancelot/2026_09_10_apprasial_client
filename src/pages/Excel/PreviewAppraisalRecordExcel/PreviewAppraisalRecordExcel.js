@@ -408,7 +408,7 @@ const PreviewAppraisalRecordExcel = () => {
           isHistoryPreview: true,
         }),
       );
-    }, 300);
+    }, 50);
   };
 
   /**
@@ -483,7 +483,7 @@ const PreviewAppraisalRecordExcel = () => {
           isHistoryPreview: false,
         }),
       );
-    }, 300);
+    }, 50);
   };
 
   /**

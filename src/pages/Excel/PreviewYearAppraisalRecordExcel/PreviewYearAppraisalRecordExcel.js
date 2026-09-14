@@ -398,7 +398,7 @@ const PreviewYearAppraisalRecordExcel = () => {
           isHistoryPreview: true,
         }),
       );
-    }, 300);
+    }, 50);
   };
 
   /**
@@ -473,7 +473,7 @@ const PreviewYearAppraisalRecordExcel = () => {
           isHistoryPreview: false,
         }),
       );
-    }, 300);
+    }, 50);
   };
 
   /**

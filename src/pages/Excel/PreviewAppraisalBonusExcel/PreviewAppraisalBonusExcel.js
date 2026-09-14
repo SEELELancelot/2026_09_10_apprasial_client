@@ -406,7 +406,7 @@ const PreviewAppraisalBonusExcel = () => {
           isHistoryPreview: true,
         }),
       );
-    }, 300);
+    }, 50);
   };
 
   /**
@@ -481,7 +481,7 @@ const PreviewAppraisalBonusExcel = () => {
           isHistoryPreview: false,
         }),
       );
-    }, 300);
+    }, 50);
   };
 
   /**

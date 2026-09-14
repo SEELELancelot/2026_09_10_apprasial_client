@@ -411,7 +411,7 @@ const PreviewAppraisalAutExcel = () => {
           isHistoryPreview: true,
         }),
       );
-    }, 300);
+    }, 50);
   };
 
   /**
@@ -486,7 +486,7 @@ const PreviewAppraisalAutExcel = () => {
           isHistoryPreview: false,
         }),
       );
-    }, 300);
+    }, 50);
   };
 
   /**
