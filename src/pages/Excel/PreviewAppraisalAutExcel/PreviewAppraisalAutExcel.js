@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   AppraisalAutExcelCallBack,
   documentUrl,
@@ -22,6 +22,10 @@ const PreviewAppraisalAutExcel = () => {
   const editorId = "Editor";
 
   const [documentEditor, setDocumentEditor] = useState(null);
+  // 文件資訊與預覽分頁租約互不相依，分別並行準備；兩者都完成才掛載
+  // OnlyOffice，避免原本「先租約、再查文件」造成的雙倍等待。
+  const [preparedDocumentEditor, setPreparedDocumentEditor] = useState(null);
+  const metadataStartedRef = useRef(false);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [fallbackDownload, setFallbackDownload] = useState(null);
@@ -35,8 +39,29 @@ const PreviewAppraisalAutExcel = () => {
     setEditable,
   } = useOnlyOfficePreviewGuard(documentId);
   const onDocumentReady = function () {
+    window.sessionStorage.removeItem(`onlyoffice-initial-retry:${window.location.href}`);
     console.warn("Document is loaded");
+    // DocsAPI 有時會比實際 iframe 繪製更早送出 ready；稍候再移除遮罩，
+    // 避免使用者看到 OnlyOffice 內部短暫的空白畫面。
+    window.setTimeout(() => setLoading(false), 700);
+  };
+
+  const onDocumentError = function (event) {
+    const error = event?.data || event || {};
+    const errorMessage = error?.errorDescription || error?.message || "OnlyOffice 文件載入失敗";
+    const retryKey = `onlyoffice-initial-retry:${window.location.href}`;
+    console.error("[OnlyOffice 預覽] 中秋文件錯誤", error);
+
+    // 服務偶發初始化失敗時，重新建立完整預覽工作階段通常即可恢復；每個網址
+    // 僅嘗試一次，避免真正的文件錯誤造成無限重新整理。
+    if (!window.sessionStorage.getItem(retryKey)) {
+      window.sessionStorage.setItem(retryKey, "1");
+      window.location.reload();
+      return;
+    }
+
     setLoading(false);
+    setLoadError(errorMessage);
   };
 
   // 不讓 OnlyOffice 在 iframe 內用舊 session 自行重載檔案。
@@ -270,6 +295,7 @@ const PreviewAppraisalAutExcel = () => {
         config={{
           events: {
             onDocumentReady,
+            onError: onDocumentError,
             onOutdatedVersion,
           },
           document: {
@@ -342,6 +368,7 @@ const PreviewAppraisalAutExcel = () => {
           },
         }}
         events_onDocumentReady={onDocumentReady}
+        events_onError={onDocumentError}
         onLoadComponentError={onLoadComponentError}
       />
     );
@@ -397,9 +424,8 @@ const PreviewAppraisalAutExcel = () => {
       fileName: excelName,
     });
 
-    setTimeout(() => {
-      setDocumentEditor(
-        buildDocumentEditor({
+    setPreparedDocumentEditor(
+      buildDocumentEditor({
           documentId,
           historyVersionId,
           excelName,
@@ -409,9 +435,8 @@ const PreviewAppraisalAutExcel = () => {
           officeMode: "view",
           callbackUrl: undefined,
           isHistoryPreview: true,
-        }),
-      );
-    }, 50);
+      }),
+    );
   };
 
   /**
@@ -479,9 +504,8 @@ const PreviewAppraisalAutExcel = () => {
     console.log("callbackUrl =", callbackUrl);
     console.log("excelData =", excelData);
 
-    setTimeout(() => {
-      setDocumentEditor(
-        buildDocumentEditor({
+    setPreparedDocumentEditor(
+      buildDocumentEditor({
           documentId,
           historyVersionId: "",
           excelName,
@@ -491,9 +515,8 @@ const PreviewAppraisalAutExcel = () => {
           officeMode,
           callbackUrl,
           isHistoryPreview: false,
-        }),
-      );
-    }, 50);
+      }),
+    );
   };
 
   /**
@@ -541,22 +564,33 @@ const PreviewAppraisalAutExcel = () => {
     ScaleTransform.apply();
 
     if (Object.keys(initialState?.user || {}).length === 0) {
-      return history.replace(ROUTENAME.Login);
+      history.replace(ROUTENAME.Login);
+      return undefined;
     }
 
+    if (!metadataStartedRef.current) {
+      metadataStartedRef.current = true;
+      console.time(`[OnlyOffice 預覽] 中秋文件資訊 ${documentId}`);
+      getExcelNameFetch(documentId).finally(() => {
+        console.timeEnd(`[OnlyOffice 預覽] 中秋文件資訊 ${documentId}`);
+      });
+    }
+    return undefined;
+  }, [documentId, initialState]);
+
+  useEffect(() => {
     if (leaseError) {
       setLoading(false);
       setLoadError(leaseError);
-      return undefined;
     }
+  }, [leaseError]);
 
-    if (!leaseReady) {
-      return undefined;
+  useEffect(() => {
+    if (leaseReady && preparedDocumentEditor) {
+      console.info("[OnlyOffice 預覽] 中秋租約與文件資訊完成，開始載入編輯器");
+      setDocumentEditor(preparedDocumentEditor);
     }
-
-    getExcelNameFetch(documentId);
-    return undefined;
-  }, [leaseReady, leaseError]);
+  }, [leaseReady, preparedDocumentEditor]);
 
   // DocumentEditor 的 script 或 iframe 偶爾不會拋出錯誤事件。不能讓畫面
   // 永遠停在轉圈；逾時後保留重新預覽與直接下載兩條可恢復路徑。
@@ -566,6 +600,13 @@ const PreviewAppraisalAutExcel = () => {
     }
 
     const timer = window.setTimeout(() => {
+      const retryKey = `onlyoffice-initial-retry:${window.location.href}`;
+      if (!window.sessionStorage.getItem(retryKey)) {
+        console.warn("[OnlyOffice 預覽] 中秋載入逾時，自動重試一次");
+        window.sessionStorage.setItem(retryKey, "1");
+        window.location.reload();
+        return;
+      }
       setLoading(false);
       setLoadError(
         "ONLYOFFICE 預覽服務回應較慢或暫時無法連線，請重新嘗試；原始 Excel 仍可直接下載。",

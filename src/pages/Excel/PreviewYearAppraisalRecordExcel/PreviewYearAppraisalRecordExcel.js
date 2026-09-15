@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   AppraisalYearRecordExcelCallback,
   documentUrl,
@@ -23,6 +23,8 @@ const PreviewYearAppraisalRecordExcel = () => {
   const editorId = "Editor";
 
   const [documentEditor, setDocumentEditor] = useState(null);
+  const [preparedDocumentEditor, setPreparedDocumentEditor] = useState(null);
+  const metadataStartedRef = useRef(false);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [fallbackDownload, setFallbackDownload] = useState(null);
@@ -30,8 +32,23 @@ const PreviewYearAppraisalRecordExcel = () => {
   const { leaseReady, leaseError, isOnline, isEditable, accessRevoked, setEditable } =
     useOnlyOfficePreviewGuard(documentId);
   const onDocumentReady = function () {
+    window.sessionStorage.removeItem(`onlyoffice-initial-retry:${window.location.href}`);
     console.warn("Year Appraisal Document is loaded");
+    window.setTimeout(() => setLoading(false), 700);
+  };
+
+  const onDocumentError = function (event) {
+    const error = event?.data || event || {};
+    const errorMessage = error?.errorDescription || error?.message || "OnlyOffice 文件載入失敗";
+    const retryKey = `onlyoffice-initial-retry:${window.location.href}`;
+    console.error("[OnlyOffice 預覽] 年度考核文件錯誤", error);
+    if (!window.sessionStorage.getItem(retryKey)) {
+      window.sessionStorage.setItem(retryKey, "1");
+      window.location.reload();
+      return;
+    }
     setLoading(false);
+    setLoadError(errorMessage);
   };
 
   // 不讓 OnlyOffice 在 iframe 內用舊 session 自行重載檔案。
@@ -260,6 +277,7 @@ const PreviewYearAppraisalRecordExcel = () => {
         config={{
           events: {
             onDocumentReady,
+            onError: onDocumentError,
             onOutdatedVersion,
           },
           document: {
@@ -329,6 +347,7 @@ const PreviewYearAppraisalRecordExcel = () => {
           },
         }}
         events_onDocumentReady={onDocumentReady}
+        events_onError={onDocumentError}
         onLoadComponentError={onLoadComponentError}
       />
     );
@@ -384,9 +403,8 @@ const PreviewYearAppraisalRecordExcel = () => {
       fileName: excelName,
     });
 
-    setTimeout(() => {
-      setDocumentEditor(
-        buildDocumentEditor({
+    setPreparedDocumentEditor(
+      buildDocumentEditor({
           documentId,
           historyVersionId,
           excelName,
@@ -396,9 +414,8 @@ const PreviewYearAppraisalRecordExcel = () => {
           officeMode: "view",
           callbackUrl: undefined,
           isHistoryPreview: true,
-        }),
-      );
-    }, 50);
+      }),
+    );
   };
 
   /**
@@ -459,9 +476,8 @@ const PreviewYearAppraisalRecordExcel = () => {
     console.log("callbackUrl =", callbackUrl);
     console.log("excelData =", excelData);
 
-    setTimeout(() => {
-      setDocumentEditor(
-        buildDocumentEditor({
+    setPreparedDocumentEditor(
+      buildDocumentEditor({
           documentId,
           historyVersionId: "",
           excelName,
@@ -471,9 +487,8 @@ const PreviewYearAppraisalRecordExcel = () => {
           officeMode,
           callbackUrl,
           isHistoryPreview: false,
-        }),
-      );
-    }, 50);
+      }),
+    );
   };
 
   /**
@@ -517,24 +532,44 @@ const PreviewYearAppraisalRecordExcel = () => {
 
   useEffect(() => {
     ScaleTransform.apply();
-
     if (Object.keys(initialState?.user || {}).length === 0) {
-      return history.replace(ROUTENAME.Login);
+      history.replace(ROUTENAME.Login);
+      return undefined;
     }
+    if (!metadataStartedRef.current) {
+      metadataStartedRef.current = true;
+      console.time(`[OnlyOffice 預覽] 年度考核文件資訊 ${documentId}`);
+      getExcelNameFetch(documentId).finally(() => {
+        console.timeEnd(`[OnlyOffice 預覽] 年度考核文件資訊 ${documentId}`);
+      });
+    }
+    return undefined;
+  }, [documentId, initialState]);
 
+  useEffect(() => {
     if (leaseError) {
       setLoading(false);
       setLoadError(leaseError);
-      return undefined;
     }
-    if (!leaseReady) return undefined;
-    getExcelNameFetch(documentId);
-    return undefined;
-  }, [leaseReady, leaseError]);
+  }, [leaseError]);
+
+  useEffect(() => {
+    if (leaseReady && preparedDocumentEditor) {
+      console.info("[OnlyOffice 預覽] 年度考核租約與文件資訊完成，開始載入編輯器");
+      setDocumentEditor(preparedDocumentEditor);
+    }
+  }, [leaseReady, preparedDocumentEditor]);
 
   useEffect(() => {
     if (!loading || !documentEditor) return undefined;
     const timer = window.setTimeout(() => {
+      const retryKey = `onlyoffice-initial-retry:${window.location.href}`;
+      if (!window.sessionStorage.getItem(retryKey)) {
+        console.warn("[OnlyOffice 預覽] 年度考核載入逾時，自動重試一次");
+        window.sessionStorage.setItem(retryKey, "1");
+        window.location.reload();
+        return;
+      }
       setLoading(false);
       setLoadError("ONLYOFFICE 預覽服務未能完成載入，請重新預覽；您仍可直接下載 Excel。");
     }, 20000);

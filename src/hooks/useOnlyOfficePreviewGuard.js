@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   acquireOnlyOfficePreview,
   checkpointOnlyOfficeDocument,
+  onlyOfficeServer,
   heartbeatOnlyOfficePreview,
   mybaseUrl,
   releaseOnlyOfficePreview,
@@ -43,6 +44,22 @@ export const useOnlyOfficePreviewGuard = (documentId) => {
   // null 表示文件權限尚未判定，避免載入期間先閃出錯誤的「唯讀」提示。
   const [isEditable, setIsEditableState] = useState(null);
   const [accessRevoked, setAccessRevoked] = useState(false);
+
+  // DocumentEditor 會在稍後才動態載入 DocsAPI；預先建立到文件服務的連線，
+  // 可避免首次預覽時額外等待 DNS/TCP/TLS 建連，並讓後續分頁重用同一連線。
+  useEffect(() => {
+    if (!onlyOfficeServer || document.querySelector(`link[data-onlyoffice-preconnect="${onlyOfficeServer}"]`)) {
+      return undefined;
+    }
+
+    const link = document.createElement("link");
+    link.rel = "preconnect";
+    link.href = onlyOfficeServer;
+    link.crossOrigin = "anonymous";
+    link.dataset.onlyofficePreconnect = onlyOfficeServer;
+    document.head.appendChild(link);
+    return undefined;
+  }, []);
 
   const setEditable = (editable) => {
     const next = Boolean(editable);
@@ -104,6 +121,7 @@ export const useOnlyOfficePreviewGuard = (documentId) => {
     };
     const handleOffline = () => setIsOnline(false);
 
+    const leaseStartedAt = performance.now();
     acquireOnlyOfficePreview(documentId, tabId)
       .then((result) => {
         if (disposed) return;
@@ -113,6 +131,10 @@ export const useOnlyOfficePreviewGuard = (documentId) => {
         }
         acquiredRef.current = true;
         setLeaseReady(true);
+        console.info("[OnlyOffice 預覽] 分頁租約完成", {
+          documentId,
+          elapsedMs: Math.round(performance.now() - leaseStartedAt),
+        });
         heartbeatTimer = window.setInterval(() => {
           heartbeat();
         }, 15000);
