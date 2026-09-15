@@ -2,43 +2,13 @@ import axios from 'axios';
 
 const ExcelAddPassword = `my55phmelu-436ymyu36ykmq[q;APjk5(&`;
 
-// Umi define 會把設定物件注入為 JSON 字串；先解析，否則 .apiBaseUrl 會是
-// undefined，Axios 便退回前端的 localhost:8000。
-const builtRuntimeConfig = JSON.parse(process.env.APP_RUNTIME_CONFIG || "{}");
+// 簽核與 OnlyOffice 固定使用區網服務；不可依瀏覽器網址或建置環境切回 localhost。
+// 否則 Document Server callback 會指到使用者電腦，導致送出簽核一直等待儲存。
 const serverPort = 7511;
-const isLocalClient = ["localhost", "127.0.0.1", "::1"].includes(
-  window.location.hostname,
-);
-const localRuntimeConfig = {
-  apiBaseUrl: "http://localhost:7511",
-  // ONLYOFFICE 在 Docker 容器內，不能用 localhost 回到 Windows 主機。
-  documentBaseUrl: "http://host.docker.internal:7511",
-  onlyOfficeCallbackBaseUrl: "http://host.docker.internal:7511",
-  onlyOfficeServer: "http://localhost:7016",
-};
-const lanRuntimeConfig = {
-  apiBaseUrl: "http://192.168.0.87:7511",
-  documentBaseUrl: "http://192.168.0.87:7511",
-  onlyOfficeCallbackBaseUrl: "http://192.168.0.87:7511",
-  onlyOfficeServer: "http://192.168.0.87:7000",
-};
-// Axios 與 OnlyOffice 依使用者實際開啟 client 的主機切換：
-// localhost:8000 一律走本機；192.168.* 一律走 .87。即使開發伺服器被用
-// 192.168 網址開啟，也不會誤把 Axios 導回 localhost。
-const builtConfigIsLocal = ["localhost", "127.0.0.1"].some((host) =>
-  String(builtRuntimeConfig.apiBaseUrl || "").includes(host),
-);
-const runtimeConfig = isLocalClient
-  ? localRuntimeConfig
-  : builtConfigIsLocal
-    ? lanRuntimeConfig
-    : builtRuntimeConfig;
-
-// apiBaseUrl 是瀏覽器呼叫 API 的位置；document/callback 則必須是
-// ONLYOFFICE Docker 容器看得到的位置，兩者在本機開發時不能都寫 localhost。
-const mybaseUrl = runtimeConfig.apiBaseUrl;
-const documentUrl = runtimeConfig.documentBaseUrl;
-const onlyOfficeCallbackBaseUrl = runtimeConfig.onlyOfficeCallbackBaseUrl;
+const lanServerBaseUrl = "http://192.168.0.87:7511";
+const mybaseUrl = lanServerBaseUrl;
+const documentUrl = lanServerBaseUrl;
+const onlyOfficeCallbackBaseUrl = lanServerBaseUrl;
 
 let AppraisalRecordExcelCallback = `office/AppraisalRecordExcelCallback`;
 const AppraisalYearRecordExcelCallback = `office/AppraisalYearRecordExcelCallback`;
@@ -51,7 +21,7 @@ let EmployeeYearAppraisalExcelDirectory = `office/excel/EmployeeAppraisalExcelYe
 let EmployeeBonusExcelDirectory = `office/excel/EmployeeBonusExcel`;
 let EmployeeAutExcelDirectory = `office/excel/EmployeeAutExcel`;
 
-const onlyOfficeServer = runtimeConfig.onlyOfficeServer;
+const onlyOfficeServer = "http://192.168.0.87:7000";
 const axiosInstance = axios.create({
   baseURL: mybaseUrl,
 });
@@ -205,6 +175,7 @@ const prepareLatestExcelDownload = async (excelId) => {
   });
   return result;
 };
+
 const acquireOnlyOfficePreview = async (documentId, tabId) =>
   axiosInstance.post('office/acquireOnlyOfficePreview', { documentId, tabId });
 

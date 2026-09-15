@@ -88,13 +88,14 @@ const EmployeeBonusSurvey = () => {
 
   const isExcelTypeDisabled = (typeId) => {
     const status = disableExcelSnap.disableExcel || {};
+    // 尚未取得後端開放狀態前一律維持停用，避免首次渲染先顯示可按、
+    // 載入完成後又立刻變成停用的閃爍情形。
     if (status.isLoading || !Array.isArray(status.data) || status.data.length === 0) {
-      // 建立時仍會即時驗證，不以短暫載入狀態改變按鈕文字或顏色。
-      return false;
+      return true;
     }
 
     const found = status.data.find((item) => Number(item.id) === Number(typeId));
-    return Number(found?.disable) === 1;
+    return !found || Number(found.disable) === 1;
   };
 
   useEffect(() => {
