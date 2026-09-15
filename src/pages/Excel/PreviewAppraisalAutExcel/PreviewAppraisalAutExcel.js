@@ -285,7 +285,7 @@ const PreviewAppraisalAutExcel = () => {
         ? `preview_${documentId}_${excelData?.document_source_revision || excelData?.document_revision || "0"}`
         : `${documentId}_${excelData?.approval_id || "draft"}_${
           excelData?.current_step_id || "0"
-        }_${editRoundKey}_${excelData?.document_revision || "0"}_stable_url`;
+        }_${editRoundKey}_stable_url`;
 
     return (
       <DocumentEditor

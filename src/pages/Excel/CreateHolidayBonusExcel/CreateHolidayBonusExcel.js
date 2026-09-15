@@ -68,7 +68,7 @@ const CreateHolidayBonusExcel = () => {
   const buildDocumentEditor = ({ excelName, excelId, fileUrl, callbackUrl }) => {
     const loginUser = initialState?.user || {};
 
-    const documentKey = `${excelId}_draft_0_draft_0`;
+    const documentKey = `${excelId}_draft_0_draft_0_stable_url`;
 
     return (
       <DocumentEditor

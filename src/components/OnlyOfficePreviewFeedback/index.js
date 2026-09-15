@@ -30,9 +30,6 @@ const OnlyOfficePreviewFeedback = ({
       >
         <Spin size="large" />
         <span>{loadingMessage || `正在開啟${title}…`}</span>
-        <span style={{ color: "#666", fontSize: 13 }}>
-          正在連線至 OnlyOffice 預覽服務，請稍候。
-        </span>
       </div>
     )}
     {error && (

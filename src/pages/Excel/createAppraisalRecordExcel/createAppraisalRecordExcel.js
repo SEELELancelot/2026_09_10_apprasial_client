@@ -76,7 +76,7 @@ const CreateAppraisalRecordExcel = () => {
      * ✅ document.key 必須能區分每一份新建文件
      * 避免 OnlyOffice 快取到舊文件。
      */
-    const documentKey = `${excelId}_draft_0_draft_0`;
+    const documentKey = `${excelId}_draft_0_draft_0_stable_url`;
 
     return (
       <DocumentEditor

@@ -28,10 +28,6 @@ const sendKeepaliveRequest = (path, body) => {
   }).catch(() => undefined);
 };
 
-const RECENT_CLOSE_WINDOW_MS = 5000;
-const RECENT_CLOSE_SETTLE_DELAY_MS = 2500;
-const getRecentCloseKey = (documentId) => `onlyoffice-recent-close:${documentId}`;
-
 /**
  * OnlyOffice 預覽分頁租約與資料安全保護。
  * - 後端限制同帳號、同文件最多三個分頁。
@@ -80,7 +76,6 @@ export const useOnlyOfficePreviewGuard = (documentId) => {
     let disposed = false;
     let heartbeatTimer;
     let checkpointTimer;
-    let leaseReadyTimer;
     const tabId = tabIdRef.current;
 
     const checkpoint = () => {
@@ -111,10 +106,6 @@ export const useOnlyOfficePreviewGuard = (documentId) => {
     };
 
     const handlePageHide = () => {
-      // 關閉編輯器後 Document Server 還會送 status:2 callback 並回寫檔案。
-      // 若使用者立即從清單重新預覽，先讓下一頁知道要短暫等待這段收尾，
-      // 避免新舊工作階段同時爭用剛建立的文件與快取。
-      window.sessionStorage.setItem(getRecentCloseKey(documentId), String(Date.now()));
       if (editableRef.current) {
         sendKeepaliveRequest("office/checkpointOnlyOfficeDocument", { documentId });
       }
@@ -143,26 +134,7 @@ export const useOnlyOfficePreviewGuard = (documentId) => {
           documentId,
           elapsedMs: Math.round(performance.now() - leaseStartedAt),
         });
-        const lastClosedAt = Number(
-          window.sessionStorage.getItem(getRecentCloseKey(documentId)) || 0,
-        );
-        const elapsedSinceClose = Date.now() - lastClosedAt;
-        const shouldSettlePreviousSession =
-          lastClosedAt > 0 && elapsedSinceClose >= 0 && elapsedSinceClose < RECENT_CLOSE_WINDOW_MS;
-        const markLeaseReady = () => {
-          if (disposed) return;
-          window.sessionStorage.removeItem(getRecentCloseKey(documentId));
-          setLeaseReady(true);
-        };
-        if (shouldSettlePreviousSession) {
-          console.info("[OnlyOffice 預覽] 等候前一個工作階段完成回寫", {
-            documentId,
-            delayMs: RECENT_CLOSE_SETTLE_DELAY_MS,
-          });
-          leaseReadyTimer = window.setTimeout(markLeaseReady, RECENT_CLOSE_SETTLE_DELAY_MS);
-        } else {
-          markLeaseReady();
-        }
+        setLeaseReady(true);
         heartbeatTimer = window.setInterval(() => {
           heartbeat();
         }, 15000);
@@ -182,7 +154,6 @@ export const useOnlyOfficePreviewGuard = (documentId) => {
 
     return () => {
       disposed = true;
-      window.clearTimeout(leaseReadyTimer);
       window.clearInterval(heartbeatTimer);
       window.clearInterval(checkpointTimer);
       window.removeEventListener("online", handleOnline);
