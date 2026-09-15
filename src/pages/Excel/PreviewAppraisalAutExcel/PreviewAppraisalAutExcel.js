@@ -260,7 +260,7 @@ const PreviewAppraisalAutExcel = () => {
         ? `preview_${documentId}_${excelData?.document_source_revision || excelData?.document_revision || "0"}`
         : `${documentId}_${excelData?.approval_id || "draft"}_${
           excelData?.current_step_id || "0"
-        }_${editRoundKey}_${excelData?.document_revision || "0"}`;
+        }_${editRoundKey}_${excelData?.document_revision || "0"}_stable_url`;
 
     return (
       <DocumentEditor
@@ -438,24 +438,31 @@ const PreviewAppraisalAutExcel = () => {
       return;
     }
 
-    const fileUrl = excelData?.document_file_url
-      ? `${documentUrl}${excelData.document_file_url}`
-      : encodeURI(
-          `${documentUrl}/office/excel/EmployeeAutExcel/${excelName}`,
-        );
-    setFallbackDownload({
-      fileUrl: excelData?.document_file_url
-        ? `${mybaseUrl}${excelData.document_file_url}`
-        : encodeURI(`${mybaseUrl}/office/excel/EmployeeAutExcel/${excelName}`),
-      fileName: excelName,
-    });
-
     const officeMode = getOfficeMode({
       excelData,
       loginUser,
       isHistoryPreview: false,
     });
     setEditable(officeMode === "edit");
+
+    const versionedFileUrl = excelData?.document_file_url
+      ? `${documentUrl}${excelData.document_file_url}`
+      : encodeURI(
+          `${documentUrl}/office/excel/EmployeeAutExcel/${excelName}`,
+        );
+    // 可編輯文件的 key 代表同一個共同編輯工作階段；來源 URL 也必須
+    // 維持穩定。安全快照更新若連帶改變 ?v=mtime，OnlyOffice 會把
+    // 同一個 key 判定為 UpdateVersion expired 並讓預覽一直轉圈。
+    // 唯讀主預覽仍保留版本化 URL，避免讀到舊快取。
+    const fileUrl = officeMode === "edit"
+      ? versionedFileUrl.replace(/\?v=[^#]*/, "")
+      : versionedFileUrl;
+    setFallbackDownload({
+      fileUrl: excelData?.document_file_url
+        ? `${mybaseUrl}${excelData.document_file_url}`
+        : encodeURI(`${mybaseUrl}/office/excel/EmployeeAutExcel/${excelName}`),
+      fileName: excelName,
+    });
 
     const callbackUrl = buildCallbackUrl({
       excelName,
