@@ -13,6 +13,7 @@ import { DocumentEditor } from "@onlyoffice/document-editor-react";
 import { history, useModel } from "@umijs/max";
 import { ScaleTransform } from "../../../../utils/ScaleTransform";
 import { useOnlyOfficePreviewGuard } from "@/hooks/useOnlyOfficePreviewGuard";
+import { useOnlyOfficeRevisionRecovery } from "@/hooks/useOnlyOfficeRevisionRecovery";
 import OnlyOfficeStatusNotice from "@/components/OnlyOfficeStatusNotice";
 import OnlyOfficePreviewFeedback from "@/components/OnlyOfficePreviewFeedback";
 
@@ -29,6 +30,7 @@ const PreviewAppraisalAutExcel = () => {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [fallbackDownload, setFallbackDownload] = useState(null);
+  const [documentRevision, setDocumentRevision] = useState("");
   const documentId = new URL(window.location.href).searchParams.get("DocumentId");
   const {
     leaseReady,
@@ -38,6 +40,7 @@ const PreviewAppraisalAutExcel = () => {
     accessRevoked,
     setEditable,
   } = useOnlyOfficePreviewGuard(documentId);
+  useOnlyOfficeRevisionRecovery(documentId, documentRevision);
   const onDocumentReady = function () {
     window.sessionStorage.removeItem(`onlyoffice-initial-retry:${window.location.href}`);
     console.warn("Document is loaded");
@@ -285,7 +288,7 @@ const PreviewAppraisalAutExcel = () => {
         ? `preview_${documentId}_${excelData?.document_source_revision || excelData?.document_revision || "0"}`
         : `${documentId}_${excelData?.approval_id || "draft"}_${
           excelData?.current_step_id || "0"
-        }_${editRoundKey}_stable_url`;
+        }_${editRoundKey}_${excelData?.document_revision || "0"}_stable_url`;
 
     return (
       <DocumentEditor
@@ -455,6 +458,7 @@ const PreviewAppraisalAutExcel = () => {
     }
 
     const excelData = message || {};
+    setDocumentRevision(String(excelData?.document_revision || ""));
     const excelName = excelData?.excel_Name;
 
     if (!excelName) {

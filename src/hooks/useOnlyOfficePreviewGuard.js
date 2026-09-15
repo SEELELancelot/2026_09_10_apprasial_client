@@ -106,9 +106,9 @@ export const useOnlyOfficePreviewGuard = (documentId) => {
     };
 
     const handlePageHide = () => {
-      if (editableRef.current) {
-        sendKeepaliveRequest("office/checkpointOnlyOfficeDocument", { documentId });
-      }
+      // DocumentEditor 關閉時會由 OnlyOffice 自己完成 status:2 回寫。
+      // 此處若再送 force-save，立即重開同一份可編輯文件時會撞上仍在
+      // 儲存中的工作階段，造成第二次預覽長時間停在載入畫面。
       release();
     };
 
