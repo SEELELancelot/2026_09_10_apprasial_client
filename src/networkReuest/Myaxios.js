@@ -175,6 +175,7 @@ const prepareLatestExcelDownload = async (excelId) => {
   });
   return result;
 };
+
 const acquireOnlyOfficePreview = async (documentId, tabId) =>
   axiosInstance.post('office/acquireOnlyOfficePreview', { documentId, tabId });
 
