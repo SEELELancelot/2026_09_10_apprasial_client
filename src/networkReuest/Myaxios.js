@@ -2,21 +2,19 @@ import axios from 'axios';
 
 const ExcelAddPassword = `my55phmelu-436ymyu36ykmq[q;APjk5(&`;
 
-// 網址由 config/config.ts 在建置時注入。本機開發使用 localhost，
-// Docker 內的 ONLYOFFICE 則經 host.docker.internal 回呼到本機後端。
-// 不要在這裡寫死部署主機，否則本機送簽會等待錯誤的 callback。
+// 網址由 config/config.ts 在建置時注入；目前預設與備援皆以 192.168.0.87 為主。
 const runtimeConfig = process.env.APP_RUNTIME_CONFIG || {};
 const normalizeBaseUrl = (value, fallback) =>
   String(value || fallback).replace(/\/$/, '');
 const serverPort = 7511;
-const mybaseUrl = normalizeBaseUrl(runtimeConfig.apiBaseUrl, 'http://localhost:7511');
+const mybaseUrl = normalizeBaseUrl(runtimeConfig.apiBaseUrl, 'http://192.168.0.87:7511');
 const documentUrl = normalizeBaseUrl(
   runtimeConfig.documentBaseUrl,
-  'http://host.docker.internal:7511',
+  'http://192.168.0.87:7511',
 );
 const onlyOfficeCallbackBaseUrl = normalizeBaseUrl(
   runtimeConfig.onlyOfficeCallbackBaseUrl,
-  'http://host.docker.internal:7511',
+  'http://192.168.0.87:7511',
 );
 
 let AppraisalRecordExcelCallback = `office/AppraisalRecordExcelCallback`;
@@ -32,7 +30,7 @@ let EmployeeAutExcelDirectory = `office/excel/EmployeeAutExcel`;
 
 const onlyOfficeServer = normalizeBaseUrl(
   runtimeConfig.onlyOfficeServer,
-  'http://localhost:7016',
+  'http://192.168.0.87:7000',
 );
 const axiosInstance = axios.create({
   baseURL: mybaseUrl,

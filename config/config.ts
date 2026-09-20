@@ -4,25 +4,16 @@ import defaultSettings from './defaultSettings';
 import proxy from './proxy';
 import routes from './routes';
 
-const {REACT_APP_ENV = 'dev'} = process.env;
+const {REACT_APP_ENV = 'production'} = process.env;
 
-// 網址只在建置時注入。本機 Docker Desktop 與區網部署使用不同位址：
-// npm run dev -> localhost / host.docker.internal；npm run build -> 192.168.0.87。
-// 環境變數仍可覆寫，讓未來搬遷主機時不必修改程式。
-const isLanBuild = REACT_APP_ENV === 'production';
-const defaultClientConfig = isLanBuild
-  ? {
-      apiBaseUrl: 'http://192.168.0.87:7511',
-      documentBaseUrl: 'http://192.168.0.87:7511',
-      onlyOfficeCallbackBaseUrl: 'http://192.168.0.87:7511',
-      onlyOfficeServer: 'http://192.168.0.87:7000',
-    }
-  : {
-      apiBaseUrl: 'http://localhost:7511',
-      documentBaseUrl: 'http://host.docker.internal:7511',
-      onlyOfficeCallbackBaseUrl: 'http://host.docker.internal:7511',
-      onlyOfficeServer: 'http://localhost:7016',
-    };
+// 目前不區分本機與正式網址；開發、建置與區網使用者都連到 192.168.0.87。
+// 環境變數仍可覆寫，日後搬遷主機不需要再次修改程式碼。
+const defaultClientConfig = {
+  apiBaseUrl: 'http://192.168.0.87:7511',
+  documentBaseUrl: 'http://192.168.0.87:7511',
+  onlyOfficeCallbackBaseUrl: 'http://192.168.0.87:7511',
+  onlyOfficeServer: 'http://192.168.0.87:7000',
+};
 
 const clientConfig = {
   apiBaseUrl: process.env.REACT_APP_API_BASE_URL || defaultClientConfig.apiBaseUrl,
