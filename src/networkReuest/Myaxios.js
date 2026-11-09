@@ -2,12 +2,12 @@ import axios from 'axios';
 
 const ExcelAddPassword = `my55phmelu-436ymyu36ykmq[q;APjk5(&`;
 
-// 網址由 config/config.ts 在建置時注入；目前預設與備援皆以 192.168.0.87 為主。
+// 網址由 config/config.ts 在建置時注入；API 備援連到本機，文件服務連到 192.168.0.87。
 const runtimeConfig = process.env.APP_RUNTIME_CONFIG || {};
 const normalizeBaseUrl = (value, fallback) =>
   String(value || fallback).replace(/\/$/, '');
 const serverPort = 7511;
-const mybaseUrl = normalizeBaseUrl(runtimeConfig.apiBaseUrl, 'http://192.168.0.87:7511');
+const mybaseUrl = normalizeBaseUrl(runtimeConfig.apiBaseUrl, 'http://localhost:7511');
 const documentUrl = normalizeBaseUrl(
   runtimeConfig.documentBaseUrl,
   'http://192.168.0.87:7511',

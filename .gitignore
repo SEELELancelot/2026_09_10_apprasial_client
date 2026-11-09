@@ -2,6 +2,7 @@
 
 # dependencies
 **/node_modules
+/.tools/
 .env.production
 .env.*.local
 # roadhog-api-doc ignore

@@ -17,6 +17,7 @@ import { useOnlyOfficePreviewGuard } from "@/hooks/useOnlyOfficePreviewGuard";
 import { useOnlyOfficeRevisionRecovery } from "@/hooks/useOnlyOfficeRevisionRecovery";
 import OnlyOfficeStatusNotice from "@/components/OnlyOfficeStatusNotice";
 import OnlyOfficePreviewFeedback from "@/components/OnlyOfficePreviewFeedback";
+import OnlyOfficeEditorHost from "@/components/OnlyOfficeEditorHost";
 
 const PreviewYearAppraisalRecordExcel = () => {
   const { initialState } = useModel("@@initialState");
@@ -611,7 +612,7 @@ const PreviewYearAppraisalRecordExcel = () => {
         title="年度考核表"
         fallbackDownload={fallbackDownload}
       />
-      {documentEditor}
+      <OnlyOfficeEditorHost>{documentEditor}</OnlyOfficeEditorHost>
     </div>
   );
 };

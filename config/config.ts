@@ -6,15 +6,14 @@ import routes from './routes';
 
 const {REACT_APP_ENV = 'production'} = process.env;
 
-// 目前不區分本機與正式網址；開發、建置與區網使用者都連到 192.168.0.87。
+// API 預設連到本機 localhost:7511；文件與 OnlyOffice 預設連到 192.168.0.87。
 // 環境變數仍可覆寫，日後搬遷主機不需要再次修改程式碼。
 const defaultClientConfig = {
-  apiBaseUrl: 'http://192.168.0.87:7511',
+  apiBaseUrl: 'http://localhost:7511',
   documentBaseUrl: 'http://192.168.0.87:7511',
   onlyOfficeCallbackBaseUrl: 'http://192.168.0.87:7511',
   onlyOfficeServer: 'http://192.168.0.87:7000',
 };
-
 const clientConfig = {
   apiBaseUrl: process.env.REACT_APP_API_BASE_URL || defaultClientConfig.apiBaseUrl,
   documentBaseUrl:
@@ -28,7 +27,8 @@ const clientConfig = {
 
 export default defineConfig({
   define: {
-    'process.env.APP_RUNTIME_CONFIG': JSON.stringify(clientConfig),
+    // Umi serializes define values; keep this an object for property access.
+    'process.env.APP_RUNTIME_CONFIG': clientConfig,
   },
   extraBabelPlugins: [process.env.NODE_ENV === 'production' ? 'transform-remove-console' : ''],
 

@@ -16,6 +16,7 @@ import { useOnlyOfficePreviewGuard } from "@/hooks/useOnlyOfficePreviewGuard";
 import { useOnlyOfficeRevisionRecovery } from "@/hooks/useOnlyOfficeRevisionRecovery";
 import OnlyOfficeStatusNotice from "@/components/OnlyOfficeStatusNotice";
 import OnlyOfficePreviewFeedback from "@/components/OnlyOfficePreviewFeedback";
+import OnlyOfficeEditorHost from "@/components/OnlyOfficeEditorHost";
 
 const PreviewAppraisalAutExcel = () => {
   const { initialState } = useModel("@@initialState");
@@ -646,7 +647,7 @@ const PreviewAppraisalAutExcel = () => {
         title="中秋獎金調查表"
         fallbackDownload={fallbackDownload}
       />
-      {documentEditor}
+      <OnlyOfficeEditorHost>{documentEditor}</OnlyOfficeEditorHost>
     </div>
   );
 };

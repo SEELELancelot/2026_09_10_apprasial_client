@@ -1,4 +1,7 @@
+import VersionedAppraisalCheck from '@/components/VersionedAppraisalCheck';
+
 const CheckApprasialModal = (props) => {
+  if (props?.checkExcelData?.templateVersion === 'v2') return <VersionedAppraisalCheck data={props.checkExcelData} />;
   const blankArray = props?.checkExcelData?.blankArray;
 
   return (

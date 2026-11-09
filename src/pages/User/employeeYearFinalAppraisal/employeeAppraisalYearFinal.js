@@ -248,6 +248,8 @@ const EmployeeAppraisalYearFinal = () => {
           confirmButtonText: '關閉',
         });
       }
+    } else {
+      await MySwal.fire({title: '檢核失敗', text: typeof resultMessage === 'string' ? resultMessage : '請重新檢核', confirmButtonText: '關閉'});
     }
   };
 

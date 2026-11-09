@@ -39,7 +39,8 @@ const MyMergeDocumentModal = (props) => {
           }else {
             await MySwal.fire({
               target: document.getElementById('EmployeeAppraisalTable'),
-              title: <span style={{color:'red',fontSize:'24px'}}>合併失敗 (請檢查是否有加密Excel存在)</span>,
+              title: '合併失敗',
+              text: typeof message === 'string' ? message : '請檢查選取文件的版本、評分及加密狀態',
               confirmButtonText: "關閉",
             })
           }
