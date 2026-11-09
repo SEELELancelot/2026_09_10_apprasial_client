@@ -15,7 +15,6 @@ const defaultClientConfig = {
   onlyOfficeServer: 'http://192.168.0.87:7000',
 };
 
-
 const clientConfig = {
   apiBaseUrl: process.env.REACT_APP_API_BASE_URL || defaultClientConfig.apiBaseUrl,
   documentBaseUrl:
