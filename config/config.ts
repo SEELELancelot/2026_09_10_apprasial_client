@@ -6,10 +6,10 @@ import routes from './routes';
 
 const {REACT_APP_ENV = 'production'} = process.env;
 
-// API 預設連到本機 localhost:7511；文件與 OnlyOffice 預設連到 192.168.0.87。
+// API、文件與 OnlyOffice 預設統一連到 192.168.0.87。
 // 環境變數仍可覆寫，日後搬遷主機不需要再次修改程式碼。
 const defaultClientConfig = {
-  apiBaseUrl: 'http://localhost:7511',
+  apiBaseUrl: 'http://192.168.0.87:7511',
   documentBaseUrl: 'http://192.168.0.87:7511',
   onlyOfficeCallbackBaseUrl: 'http://192.168.0.87:7511',
   onlyOfficeServer: 'http://192.168.0.87:7000',
@@ -24,7 +24,6 @@ const clientConfig = {
   onlyOfficeServer:
     process.env.REACT_APP_ONLYOFFICE_SERVER || defaultClientConfig.onlyOfficeServer,
 };
-
 
 export default defineConfig({
   define: {
