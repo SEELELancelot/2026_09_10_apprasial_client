@@ -1,7 +1,9 @@
 import { DocumentEditor } from "@onlyoffice/document-editor-react";
 import { useEffect, useRef, useState } from "react";
 import { history, useModel } from "@umijs/max";
-import { Modal, Spin } from "antd";
+import { Modal } from "antd";
+import ExcelCreationStatus from "@/components/ExcelCreationStatus";
+import { readExcelCreationResponse, getExcelCreationError } from "@/utils/excelCreation";
 
 import {
   AppraisalYearRecordExcelCallback,
@@ -164,25 +166,7 @@ const CreateAppraisalYearExcel = () => {
        *   excelName: "..."
        * }
        */
-      const { success, excelName, excelId, message } = result.data || {};
-
-      if (success !== 1) {
-        console.warn("建立年度考核 Excel 失敗：", message);
-        setLoadingText(message || "建立年度考核表失敗");
-        setLoading(false);
-        return;
-      }
-
-      if (!excelName) {
-        console.warn("後端未回傳 excelName");
-        setLoadingText("後端未回傳 excelName");
-        setLoading(false);
-        return;
-      }
-
-      if (!excelId) {
-        console.warn("後端未回傳 excelId，歷史版本將無法建立");
-      }
+      const { excelName, excelId } = readExcelCreationResponse(result.data);
 
       setLoadingText("正在開啟 OnlyOffice 編輯器...");
 
@@ -243,7 +227,7 @@ const CreateAppraisalYearExcel = () => {
         });
         return;
       }
-      setLoadingText("建立年度考核表發生錯誤");
+      setLoadingText(getExcelCreationError(e, "建立年度考核表發生錯誤"));
       setLoading(false);
     }
   };
@@ -303,32 +287,11 @@ const CreateAppraisalYearExcel = () => {
         background: "#fff",
       }}
     >
-      {loading && (
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            zIndex: 9999,
-            background: "#fff",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            flexDirection: "column",
-          }}
-        >
-          <Spin size="large" />
-
-          <div
-            style={{
-              marginTop: 16,
-              fontSize: 16,
-              color: "#555",
-            }}
-          >
-            {loadingText}
-          </div>
-        </div>
-      )}
+      <ExcelCreationStatus
+        loading={loading}
+        message={loadingText}
+        onReturn={() => history.replace(ROUTENAME.employee_appraisalTabs)}
+      />
 
       {documentEditor}
     </div>

@@ -89,12 +89,12 @@ const axiosLogin = async (account, password) => {
 };
 
 const createEmployeeAppraisalExcel = async () => {
-  const result = await axiosInstance.post('office/exportExcel');
+  const result = await axiosInstance.post('office/exportExcel', undefined, {timeout: 120000});
   return result;
 };
 
 const createEmployeeYearFinalAppraisalExcel = async () => {
-  const result = await axiosInstance.post('office/exportYearFinalExcel');
+  const result = await axiosInstance.post('office/exportYearFinalExcel', undefined, {timeout: 120000});
   return result;
 };
 // 端午獎金
