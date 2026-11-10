@@ -25,7 +25,6 @@ const clientConfig = {
     process.env.REACT_APP_ONLYOFFICE_SERVER || defaultClientConfig.onlyOfficeServer,
 };
 
-
 export default defineConfig({
   define: {
     // Umi serializes define values; keep this an object for property access.
