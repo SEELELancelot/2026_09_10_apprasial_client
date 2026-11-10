@@ -1,3 +1,4 @@
+import { getOfficeMode } from "@/utils/onlyOfficeEditPermission";
 import { useEffect, useRef, useState } from "react";
 import {
   AppraisalYearRecordExcelCallback,
@@ -120,73 +121,6 @@ const PreviewYearAppraisalRecordExcel = () => {
     return encodeURI(`${documentUrl}/${cleanPath}`);
   };
 
-  /**
-   * ✅ 判斷 OnlyOffice mode
-   *
-   * 歷史文件：
-   * - 永遠 view
-   * - 不帶 callbackUrl
-   *
-   * 主檔：
-   * - 未送出：建立者 edit
-   * - 簽核中：目前簽核者 edit
-   * - 人事 admin_type === 1 預設 view
-   * - 6868 可 edit
-   */
-  const getOfficeMode = ({ excelData, loginUser, isHistoryPreview }) => {
-    if (isHistoryPreview) {
-      return "view";
-    }
-
-    const adminType = String(loginUser?.admin_type || "");
-    const loginUserId = String(loginUser?.USER_ID || "");
-
-    const excelSend = String(excelData?.excel_Send || "");
-    const createUser = String(
-      excelData?.create_user || excelData?.create_userId || "",
-    );
-
-    const approvalStatus = String(excelData?.approval_status || "");
-
-    // 完成後不可再由任何身分（包括管理員）修改正式主檔。
-    if (["completed", "approved"].includes(approvalStatus)) {
-      return "view";
-    }
-    const currentApproverUserId = String(
-      excelData?.current_approver_user_id || "",
-    );
-
-    const isNotSend = excelSend === "0";
-    const isCreator = createUser === loginUserId;
-
-    const isCurrentApprover =
-      approvalStatus === "pending" &&
-      currentApproverUserId &&
-      currentApproverUserId === loginUserId;
-
-    const isHumanResourceAdmin = adminType === "1";
-    const isSuperAdmin = adminType === "1" && loginUserId === "6868";
-
-    let nextMode = "view";
-
-    if (isNotSend && isCreator) {
-      nextMode = "edit";
-    }
-
-    if (!isNotSend && isCurrentApprover) {
-      nextMode = "edit";
-    }
-
-    if (isHumanResourceAdmin && !isCurrentApprover) {
-      nextMode = "view";
-    }
-
-    if (isSuperAdmin) {
-      nextMode = "edit";
-    }
-
-    return nextMode;
-  };
 
   /**
    * ✅ 建立 editRoundKey
@@ -225,7 +159,7 @@ const PreviewYearAppraisalRecordExcel = () => {
                               loginUser,
                               isHistoryPreview,
                             }) => {
-    if (isHistoryPreview) {
+    if (getOfficeMode({ excelData, isHistoryPreview }) !== "edit") {
       return undefined;
     }
 

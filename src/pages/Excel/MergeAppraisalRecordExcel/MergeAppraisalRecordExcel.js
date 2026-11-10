@@ -11,7 +11,7 @@ const MergeAppraisalRecordExcel = (props) => {
   const {initialState} = useModel('@@initialState');
 
   let [userDoc, setUserDoc] = useState(`${documentUrl}/office/excel/空白.xlsx`);
-  let [officeMode,setOfficeMode]=useState("edit");
+  const officeMode = "view";
 
   const [editorId, setEditorId] = "Editor";
   const onDocumentReady = function (event,data) {
@@ -48,6 +48,7 @@ const MergeAppraisalRecordExcel = (props) => {
             "title": excelName,
             "url": pathName,
             "permissions":{
+          edit: false,
               chat:true,
             }
           },
@@ -120,6 +121,7 @@ const MergeAppraisalRecordExcel = (props) => {
         "title": "員工考核紀錄",
         "url": userDoc,
         "permissions":{
+          edit: false,
           chat:true,
         }
       },

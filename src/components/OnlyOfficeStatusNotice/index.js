@@ -44,7 +44,7 @@ const OnlyOfficeStatusNotice = ({
         <Alert
           type="warning"
           showIcon
-          message="文件已送出，這個舊分頁不能再儲存；即將重新載入為唯讀預覽。"
+          message="文件狀態或權限已變更（可能已送出或刪除），此分頁無法再儲存；即將重新載入，請返回清單確認。"
         />
       </div>
     );
@@ -68,7 +68,7 @@ const OnlyOfficeStatusNotice = ({
         <Alert
           type="info"
           showIcon
-          message="此文件已送出或為歷史版本，僅供預覽，無法修改或儲存。"
+          message="此文件目前為唯讀預覽，無法修改或儲存。"
         />
       </div>
     );

@@ -238,21 +238,7 @@ const updateExcelSend = async (id) => {
   return result;
 };
 
-const checkAppraisalRecordError = async (excel_Name) => {
-  const result = await axiosInstance.post('office/checkAppraisalRecordError', {
-    excel_name: excel_Name,
-  });
 
-  return result;
-};
-
-const checkYearAppraisalRecordError = async (excel_Name) => {
-  const result = await axiosInstance.post('office/checkYearAppraisalRecordError', {
-    excel_name: excel_Name,
-  });
-
-  return result;
-};
 
 const mergeAppraisalExcel = async (excelArray) => {
   const result = await axiosInstance.post('office/mergeAppraisalExcel', {
@@ -373,8 +359,6 @@ export {
 
   axiosLogin,
 
-  checkAppraisalRecordError,
-  checkYearAppraisalRecordError,
 
   createEmployeeAppraisalExcel,
   createEmployeeYearFinalAppraisalExcel,

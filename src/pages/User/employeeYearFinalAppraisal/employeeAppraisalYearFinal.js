@@ -5,7 +5,6 @@ import { DropDownModel } from '@/myModel/DropDown/dropDown';
 import { TableModel } from '@/myModel/TableData/Table';
 
 import {
-  checkYearAppraisalRecordError,
   mybaseUrl,
 
   // ✅ 簽核流程 API
@@ -22,7 +21,6 @@ import {
   prepareLatestExcelDownload,
 } from '@/networkReuest/Myaxios';
 
-import CheckYearApprasialModal from '@/pages/Modal/checkYearApprasialModal';
 import DeleteYearApprasialModal from '@/pages/Modal/deleteYearApprasialModal';
 import MyMergeYearDocumentModal from '@/pages/Modal/MyMergeYearDocumentModal';
 import ResizeableTitle from '@/pages/publicComponents/ResizeableTitle';
@@ -69,8 +67,6 @@ const EmployeeAppraisalYearFinal = () => {
   const [deleteModal, setDeleteModal] = useState(false);
   const [MergeDocumentModal, setMergeDocumentModal] = useState(false);
 
-  const [checkApprasialModal, setCheckApprasialModal] = useState(false);
-  const [checkExcelData, setCheckExcelData] = useState([]);
 
   const [approvalModalOpen, setApprovalModalOpen] = useState(false);
   const [approvalMode, setApprovalMode] = useState('submit'); // submit / approve / readonly
@@ -229,29 +225,6 @@ const EmployeeAppraisalYearFinal = () => {
     safeReloadYearAppraisalTable(year);
   };
 
-  /**
-   * ✅ 檢核 Excel 空白
-   */
-  const checkExcel_Blank = async (excelName) => {
-    const result = await checkYearAppraisalRecordError(excelName);
-    const { success, message: resultMessage } = result.data;
-
-    if (success === 1) {
-      await setCheckExcelData(resultMessage);
-
-      if (resultMessage?.blankArray?.length > 0) {
-        await setCheckApprasialModal(true);
-      } else {
-        await MySwal.fire({
-          target: document.getElementById('EmployeeAppraisalTable'),
-          title: <h3>檢核無誤</h3>,
-          confirmButtonText: '關閉',
-        });
-      }
-    } else {
-      await MySwal.fire({title: '檢核失敗', text: typeof resultMessage === 'string' ? resultMessage : '請重新檢核', confirmButtonText: '關閉'});
-    }
-  };
 
   /**
    * ✅ 查詢 Excel 歷史文件版本
@@ -825,12 +798,6 @@ const EmployeeAppraisalYearFinal = () => {
                 {statusText}
               </span>
 
-              <a
-                style={{ marginLeft: 8 }}
-                onClick={() => checkExcel_Blank(item?.excel_Name)}
-              >
-                檢核
-              </a>
             </div>
           );
         },
@@ -1323,30 +1290,6 @@ const EmployeeAppraisalYearFinal = () => {
         />
       </Modal>
 
-      {/* ✅ 檢核結果 Modal */}
-      <Modal
-        style={{ top: 20 }}
-        title=""
-        getContainer={() =>
-          MyUtils.isFullscreenElement()
-            ? document.getElementById('EmployeeAppraisalTable')
-            : document.getElementById('root')
-        }
-        afterOpenChange={(op) => {
-          document.body.style.overflowY = op ? 'hidden' : 'scroll';
-        }}
-        open={checkApprasialModal}
-        footer={null}
-        onOk={() => setCheckApprasialModal(false)}
-        onCancel={() => setCheckApprasialModal(false)}
-        width={600}
-        destroyOnClose
-      >
-        <CheckYearApprasialModal
-          checkExcelData={checkExcelData}
-          setCheckApprasialModal={setCheckApprasialModal}
-        />
-      </Modal>
 
       {/* ✅ 刪除 Modal */}
       <Modal
