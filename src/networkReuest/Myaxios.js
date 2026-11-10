@@ -1,4 +1,5 @@
 import axios from 'axios';
+import {readLoginResponse} from '@/utils/loginResponse';
 
 const ExcelAddPassword = `my55phmelu-436ymyu36ykmq[q;APjk5(&`;
 
@@ -81,7 +82,8 @@ const axiosLogin = async (account, password) => {
   const result = await axiosInstance.post('login', {
     account,
     password,
-  });
+  }, {timeout: 15000});
+  result.data = readLoginResponse(result.data);
 
   return result;
 };

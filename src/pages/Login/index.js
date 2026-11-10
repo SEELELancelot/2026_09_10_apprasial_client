@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import {useModel} from "@umijs/max";
 import {Button, Form, Input} from "antd";
 import './Login.css'
@@ -16,42 +16,46 @@ const Login = () => {
   const navigate = useNavigate();
   const [success, setSuccess] = useState(1);
   const [errorMessage, setErrorMessage] = useState();
+  const [submitting, setSubmitting] = useState(false);
+  const loginInFlight = useRef(false);
 
   const onFinish=async (values) => {
-    const {account, password} = values;
-    console.log(account,password);
-    const result = await axiosLogin(account, password);
-    const {success, message} = result.data;
-    console.log(success);
-    if (success === -1) {
-      setSuccess(success);
-      setErrorMessage(message);
-    } else {
-      //    成功 獲取token 設定token
+    if (loginInFlight.current) return;
+    loginInFlight.current = true;
+    setSubmitting(true);
+    setErrorMessage(undefined);
+    try {
+      const {account, password} = values;
+      const result = await axiosLogin(account, password);
+      const {success, message} = result.data;
+      if (success === -1) {
+        setSuccess(success);
+        setErrorMessage(message);
+        return;
+      }
       const {token} = result.data;
-      console.log("檢查登入");
-      console.log(token);
       const decode_data = jwt_decode(token);
-      console.log(decode_data);
-
-      await localStorage.setItem("token", token);
-
+      localStorage.setItem("token", token);
       flushSync(() => {
-        setInitialState((s) => ({
-          ...s,
-          user: decode_data,
-        }));
+        setInitialState((s) => ({...s,user: decode_data}));
       });
-
       navigate(ROUTENAME.LoginGetInitData);
-
+    } catch (error) {
+      const backendMessage = error?.response?.data?.message;
+      setSuccess(-1);
+      setErrorMessage(typeof backendMessage === 'string' ? backendMessage
+        : ['ECONNABORTED','ETIMEDOUT'].includes(error?.code)
+          ? '登入逾時，請確認後端資料庫連線後再試'
+          : error?.message === '登入回應格式錯誤，請確認後端服務版本'
+            ? error.message : '無法完成登入，請確認後端服務是否正常');
+    } finally {
+      loginInFlight.current = false;
+      setSubmitting(false);
     }
-
-
   }
 
   const onFinishFailed = (errorInfo) => {
-    console.log('Failed:', errorInfo);
+    setErrorMessage('請填寫帳號與密碼');
   };
   return (
 
@@ -124,7 +128,7 @@ const Login = () => {
 
               }}
             >
-              <Button style={{width:'100px',marginTop:'20px'}} type="primary" htmlType="submit" className={"submit_button"}>
+              <Button loading={submitting} disabled={submitting} style={{width:'100px',marginTop:'20px'}} type="primary" htmlType="submit" className={"submit_button"}>
                 登入
               </Button>
 
